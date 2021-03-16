@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from typing import Union
 
+# sets up corresponding dicts and tokens (str or None) depending on model name
 
 @dataclass
 class TransformerConfig:
-    src_dict: Union[str, None]
-    tgt_dict: Union[str, None]
-    src_tok: Union[str, None]
-    tgt_tok: Union[str, None]
+    src_dict: Union[str, None]      # dict for source lang
+    tgt_dict: Union[str, None]      # dict for target lang
+    src_tok: Union[str, None]       # source tokenizer
+    tgt_tok: Union[str, None]       # target tokenizer
 
 
 CONFIGS = {

@@ -38,7 +38,7 @@ class PororoAsrFactory(PororoFactoryBase):
         batch_size (int): inference batch size
 
     Returns:
-        dict: result of speech recognition
+        dict: result of speech recognition          # audio name, duration, results (dict): speech time section, length in ms, text
 
     Examples:
         >>> asr = Pororo(task='asr', lang='ko')
@@ -72,7 +72,7 @@ class PororoAsrFactory(PororoFactoryBase):
     """
 
     def __init__(self, task: str, lang: str, model: Optional[str]):
-        super().__init__(task, lang, model)
+        super().__init__(task, lang, model)                             # inherit from PororoFactoryBase
 
     @staticmethod
     def get_available_langs():
@@ -86,7 +86,7 @@ class PororoAsrFactory(PororoFactoryBase):
             "zh": ["wav2vec.zh"],
         }
 
-    def load(self, device: str):
+    def load(self, device: str):                    # Load user-selected task-specific model
         """
         Load user-selected task-specific model
 
@@ -97,22 +97,22 @@ class PororoAsrFactory(PororoFactoryBase):
             object: User-selected task-specific model
 
         """
-        if self.config.lang not in self.get_available_langs():
+        if self.config.lang not in self.get_available_langs():      # raise error if unsupported language
             raise ValueError(
                 f"Unsupported Language : {self.config.lang}",
                 'Support Languages : ["ko", "en", "zh"]',
             )
-        from pororo.models.wav2vec2.recognizer import BrainWav2Vec2Recognizer
+        from pororo.models.wav2vec2.recognizer import BrainWav2Vec2Recognizer       # Wav2Vec 2.0 Speech Recognizer
 
-        model_path = download_or_load(
+        model_path = download_or_load(                      # Download or load model based on model information
             f"misc/{self.config.n_model}.pt",
             self.config.lang,
         )
-        dict_path = download_or_load(
+        dict_path = download_or_load(                       # Download or load dict based on dict path
             f"misc/{self.config.lang}.ltr.txt",
             self.config.lang,
         )
-        vad_model_path = download_or_load(
+        vad_model_path = download_or_load(                  # download or load voice activity detection model
             "misc/vad.pt",
             lang="multi",
         )
@@ -126,12 +126,12 @@ class PororoAsrFactory(PororoFactoryBase):
 
         from pororo.models.vad import VoiceActivityDetection
 
-        vad_model = VoiceActivityDetection(
+        vad_model = VoiceActivityDetection(                 # instantiate vad_model
             model_path=vad_model_path,
             device=device,
         )
 
-        model = BrainWav2Vec2Recognizer(
+        model = BrainWav2Vec2Recognizer(                    # instantiate model (BrainWav2Vec2Recognizer)
             model_path=model_path,
             dict_path=dict_path,
             vad_model=vad_model,

@@ -126,19 +126,19 @@ def download_or_load_transformer(info: DownloadInfo) -> TransformerInfo:
         TransformerInfo: information dataclass for transformer construction
 
     """
-    config = CONFIGS[info.n_model.split("/")[-1]]
+    config = CONFIGS[info.n_model.split("/")[-1]]   # sets up corresponding dicts and tokens (str or None) depending on model name
 
-    src_dict_in = config.src_dict
-    tgt_dict_in = config.tgt_dict
-    src_tok = config.src_tok
-    tgt_tok = config.tgt_tok
+    src_dict_in = config.src_dict       # source lang dict (str or None)
+    tgt_dict_in = config.tgt_dict       # target lang dict (str or None)
+    src_tok = config.src_tok            # source tokenizer (str or None)
+    tgt_tok = config.tgt_tok            # target tokenizer (str or None)
 
-    info.n_model += ".pt"
+    info.n_model += ".pt"               # model name
     model_path = os.path.join(info.root_dir, info.n_model)
 
     # Download or load Transformer model
-    model_type_dir = "/".join(model_path.split("/")[:-1])
-    if not os.path.exists(model_path):
+    model_type_dir = "/".join(model_path.split("/")[:-1])       # model path
+    if not os.path.exists(model_path):                          # if model path X exists, download specified model from Tenth
         model_type_dir = download_from_url(
             info.n_model,
             model_path,
@@ -150,7 +150,7 @@ def download_or_load_transformer(info: DownloadInfo) -> TransformerInfo:
     src_dict, tgt_dict = str(), str()
 
     # Download or load corresponding dictionary
-    if src_dict_in:
+    if src_dict_in:                          # if dict not None: load dict; if path X exists, download dict from Tenth
         src_dict = f"{src_dict_in}.txt"
         src_dict_path = os.path.join(info.root_dir, f"dicts/{src_dict}")
         dict_type_dir = "/".join(src_dict_path.split("/")[:-1])
@@ -175,7 +175,7 @@ def download_or_load_transformer(info: DownloadInfo) -> TransformerInfo:
 
     # Download or load corresponding tokenizer
     src_tok_path, tgt_tok_path = None, None
-    if src_tok:
+    if src_tok:                                     # if tokenizer exists,
         src_tok_path = download_or_load(
             f"tokenizers/{src_tok}.zip",
             lang=info.lang,
@@ -186,7 +186,7 @@ def download_or_load_transformer(info: DownloadInfo) -> TransformerInfo:
             lang=info.lang,
         )
 
-    return TransformerInfo(
+    return TransformerInfo(                             # return dataclass of Transformer info
         path=model_type_dir,
         dict_path=dict_type_dir,
         # Drop prefix "dict." and postfix ".txt"
@@ -310,7 +310,7 @@ def download_or_load(
 
     """
     root_dir = get_save_dir(save_dir=custom_save_dir)
-    info = DownloadInfo(n_model, lang, root_dir)
+    info = DownloadInfo(n_model, lang, root_dir)        # obj containing model name, lang, and save directory
 
     if "transformer" in n_model:
         return download_or_load_transformer(info)

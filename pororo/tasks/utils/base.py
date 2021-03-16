@@ -20,11 +20,11 @@ class PororoTaskBase:
 
     @property
     def n_model(self):
-        return self.config.n_model
+        return self.config.n_model          # returns n_model str from TaskConfig
 
     @property
     def lang(self):
-        return self.config.lang
+        return self.config.lang             # returns lang str from TaskConfig
 
     @abstractmethod
     def predict(
@@ -43,7 +43,7 @@ class PororoTaskBase:
         return f"[TASK]: {self.config.task.upper()}\n[LANG]: {self.config.lang.upper()}\n[MODEL]: {self.config.n_model}"
 
     def _normalize(self, text: str):
-        """Unicode normalization and whitespace removal (often needed for contexts)"""
+        """Unicode normalization and whitespace removal (often needed for contextexis)"""
         text = unicodedata.normalize("NFKC", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text

@@ -5,18 +5,18 @@ import torch
 import torch.nn as nn
 
 
-def same_padding(kernel):
-    pad_val = (kernel - 1) / 2
+def same_padding(kernel):           # kernel = 8
+    pad_val = (kernel - 1) / 2      # output will be same size if stride = 1        # 3.5
 
     if kernel % 2 == 0:
-        out = (int(pad_val - 0.5), int(pad_val + 0.5))
+        out = (int(pad_val - 0.5), int(pad_val + 0.5))      # (3,4)
     else:
         out = int(pad_val)
 
-    return out
+    return out                      # output = padding on 1 side
 
 
-class VoiceActivityDetection(object):
+class VoiceActivityDetection(object):           # returns speech intervals
     """
     Voice activity detection (VAD), also known as speech activity detection or speech detection,
     is the detection of the presence or absence of human speech, used in speech processing.
@@ -29,108 +29,108 @@ class VoiceActivityDetection(object):
     def __init__(self, model_path: str, device: str):
         import librosa
 
-        self.librosa = librosa
+        self.librosa = librosa              # package for music and audio analysis
 
         self.sample_rate = 16000
-        self.n_mfcc = 5
-        self.n_mels = 40
+        self.n_mfcc = 5                     # ? Mel-frequency cepstral coefficients (MFC = represents short-term power spectrum (frequency components) of a sound)
+        self.n_mels = 40                    # kind of like frequency?
         self.device = device
 
-        self.model = ConvVADModel()
-        self.model.load_state_dict(torch.load(model_path, map_location=device))
+        self.model = ConvVADModel()         # model = ConvVADModel (residual network)
+        self.model.load_state_dict(torch.load(model_path, map_location=device))     # TODO: examine
 
-        self.model.to(device).eval()
+        self.model.to(device).eval()        # sets module on evaluation mode
 
-    def extract_features(
+    def extract_features(                   # extracts features (mfcc, delta, delta-delta, and rmse) as one transposed array
         self,
         signal,
         size: int = 512,
         step: int = 16,
     ):
         # Mel Frequency Cepstral Coefficents
-        mfcc = self.librosa.feature.mfcc(
-            y=signal,
-            sr=self.sample_rate,
-            n_mfcc=self.n_mfcc,
-            n_fft=size,
-            hop_length=step,
+        mfcc = self.librosa.feature.mfcc(                           # MFCCs = most used feature in speech recognition
+            y=signal,                                                    # audio time series (as array)
+            sr=self.sample_rate,                                         # sampling rate of y (# samples taken per second, from continuous signal to make it discrete/digital)
+            n_mfcc=self.n_mfcc,                                          # number of MFCCs to return
+            n_fft=size,                                                  # length of FFT (fast Fourier transforms) window
+            hop_length=step,                                             # number of samples between successive frames/adjacent STFT columns
         )
-        mfcc_delta = self.librosa.feature.delta(mfcc)
-        mfcc_delta2 = self.librosa.feature.delta(mfcc, order=2)
+        mfcc_delta = self.librosa.feature.delta(mfcc)                # compute MFCC deltas; local estimate of the derivative of the input data along the selected axis.
+        mfcc_delta2 = self.librosa.feature.delta(mfcc, order=2)      # compute MFCC delta-deltas (second derivative)
 
         # Root Mean Square Energy
-        melspectrogram = self.librosa.feature.melspectrogram(
-            y=signal,
-            n_mels=self.n_mels,
-            sr=self.sample_rate,
-            n_fft=size,
-            hop_length=step,
+        melspectrogram = self.librosa.feature.melspectrogram(       # compute a mel-scaled spectrogram
+            y=signal,                                                   # audio time series (as array)
+            n_mels=self.n_mels,                                         # number of Mel bands to generate
+            sr=self.sample_rate,                                        # sampling rate of y
+            n_fft=size,                                                 # length of FFT (fast Fourier transforms) window
+            hop_length=step,                                            # number of samples between successive frames/adjacent STFT columns
         )
-        rmse = self.librosa.feature.rms(
+        rmse = self.librosa.feature.rms(                            # Compute RMS for each frame in mel spectrogram
             S=melspectrogram,
             frame_length=self.n_mels * 2 - 1,
             hop_length=step,
         )
 
-        mfcc = np.asarray(mfcc)
+        mfcc = np.asarray(mfcc)                                     # turn everything into array
         mfcc_delta = np.asarray(mfcc_delta)
         mfcc_delta2 = np.asarray(mfcc_delta2)
         rmse = np.asarray(rmse)
 
-        features = np.concatenate((mfcc, mfcc_delta, mfcc_delta2, rmse), axis=0)
-        features = np.transpose(features)
+        features = np.concatenate((mfcc, mfcc_delta, mfcc_delta2, rmse), axis=0)  # concatenate all outputs into 1 array
+        features = np.transpose(features)                                         # transpose
 
         return features
 
-    def smooth_predictions_v1(self, label):
-        smoothed_label = list()
+    def smooth_predictions_v1(self, label):                         # Smooth 'predict_label' (get rid of any sharp outliers) I think?
+        smoothed_label = list()                                     # makes empty list
 
         # Smooth with 3 consecutive windows
-        for i in range(2, len(label), 3):
-            cur_pred = label[i]
-            if cur_pred == label[i - 1] == label[i - 2]:
-                smoothed_label.extend([cur_pred, cur_pred, cur_pred])
-            else:
-                if len(smoothed_label) > 0:
-                    smoothed_label.extend([
+        for i in range(2, len(label), 3):                           # 2 to len(label) w/ step of 3
+            cur_pred = label[i]                                     # label passed in: 'predict_label'
+            if cur_pred == label[i - 1] == label[i - 2]:            # if three labels in a row same:
+                smoothed_label.extend([cur_pred, cur_pred, cur_pred])   # add 3 of that label to list
+            else:                                                   # else:
+                if len(smoothed_label) > 0:                             # if length of list > 0:
+                    smoothed_label.extend([                                 # add last elem 3 more times
                         smoothed_label[-1], smoothed_label[-1],
                         smoothed_label[-1]
                     ])
-                else:
-                    smoothed_label.extend([0, 0, 0])
+                else:                                                   # else:
+                    smoothed_label.extend([0, 0, 0])                        # add 0 3 more times
 
         n = 0
-        while n < len(smoothed_label):
+        while n < len(smoothed_label):                              # while n < length of list      # Why do this?
             cur_pred = smoothed_label[n]
-            if cur_pred == 1:
-                if n > 0:
-                    smoothed_label[n - 1] = 1
-                if n < len(smoothed_label) - 1:
-                    smoothed_label[n + 1] = 1
+            if cur_pred == 1:                                       # if smoothed_label[n] == 1:
+                if n > 0:                                               # if n is not first elem:
+                    smoothed_label[n - 1] = 1                               # prev elem = 1
+                if n < len(smoothed_label) - 1:                         # if n is not last elem:
+                    smoothed_label[n + 1] = 1                               # next elem = 1
                 n += 2
             else:
                 n += 1
 
         for idx in range(len(label) - len(smoothed_label)):
-            smoothed_label.append(smoothed_label[-1])
+            smoothed_label.append(smoothed_label[-1])               # pad w/ last elem to match size w/ original label
 
         return smoothed_label
 
-    def smooth_predictions_v2(self, label):
+    def smooth_predictions_v2(self, label):                         # Smooth 'predict_label' (get rid of any sharp outliers)
         smoothed_label = list()
         # Smooth with 3 consecutive windows
-        for i in range(2, len(label)):
-            cur_pred = label[i]
-            if cur_pred == label[i - 1] == label[i - 2]:
-                smoothed_label.append(cur_pred)
-            else:
-                if len(smoothed_label) > 0:
-                    smoothed_label.append(smoothed_label[-1])
-                else:
-                    smoothed_label.append(0)
+        for i in range(2, len(label)):                              # instead of going by 3, stride = 1
+            cur_pred = label[i]                                     # label passed in: 'predict_label'
+            if cur_pred == label[i - 1] == label[i - 2]:            # if 3 in a row same:
+                smoothed_label.append(cur_pred)                         # append
+            else:                                                   # else:
+                if len(smoothed_label) > 0:                             # if length of list > 0:
+                    smoothed_label.append(smoothed_label[-1])               # append last elem
+                else:                                                   # else:
+                    smoothed_label.append(0)                                # append 0
 
         n = 0
-        while n < len(smoothed_label):
+        while n < len(smoothed_label):                              # same as above; why do this?
             cur_pred = smoothed_label[n]
             if cur_pred == 1:
                 if n > 0:
@@ -142,21 +142,21 @@ class VoiceActivityDetection(object):
                 n += 1
 
         for _ in range(len(label) - len(smoothed_label)):
-            smoothed_label.append(smoothed_label[-1])
+            smoothed_label.append(smoothed_label[-1])               # pad w/ last elem to match size w/ original label
 
         return smoothed_label
 
-    def get_speech_intervals(self, data, label):
+    def get_speech_intervals(self, data, label):                # TODO: check what 'label' and 'data' are
 
-        def get_speech_interval(labels):
+        def get_speech_interval(labels):                            # 'label'
             seguence_length = 1024
             speech_interval = [[0, 0]]
             pre_label = 0
 
-            for idx, label in enumerate(labels):
+            for idx, label in enumerate(labels):                    # for each label:
 
-                if label:
-                    if pre_label == 1:
+                if label:                                           # if label != 0?
+                    if pre_label == 1:                              # What's going on?
                         speech_interval[-1][1] = (idx + 1) * seguence_length
                     else:
                         speech_interval.append([
@@ -168,90 +168,91 @@ class VoiceActivityDetection(object):
             return speech_interval[1:]
 
         speech_intervals = list()
-        interval = get_speech_interval(label)
+        interval = get_speech_interval(label)                       # list of lists
 
         for start, end in interval:
             speech_intervals.append(data[start:end])
 
         return speech_intervals
 
-    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):
+    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance is called as fn
         seguence_signal = list()
 
         self.sample_rate = sample_rate
         start_pointer = 0
         end_pointer = 1024
 
-        while end_pointer < len(signal):
-            seguence_signal.append(signal[start_pointer:end_pointer])
+        while end_pointer < len(signal):                                    # while end pointer is smaller than signal length:
+            seguence_signal.append(signal[start_pointer:end_pointer])           # append: slice of signal from start to end ptr
 
-            start_pointer = end_pointer
+            start_pointer = end_pointer                                     # move window by 1024
             end_pointer += 1024
 
-        feature = [self.extract_features(signal) for signal in seguence_signal]
+        feature = [self.extract_features(signal) for signal in seguence_signal]  # list of features (mfcc, delta, delta-delta, and rmse) as one transposed array from each section of signal
 
-        feature = np.array(feature)
-        feature = np.expand_dims(feature, 1)
-        x_tensor = torch.from_numpy(feature).float().to(self.device)
+        feature = np.array(feature)                                         # turn into array
+        feature = np.expand_dims(feature, 1)                                # expand array shape + insert axis at 1     # what does it mean to insert an axis in 1? Ask about axes in general?
+        x_tensor = torch.from_numpy(feature).float().to(self.device)        # x_tensor = tensor version of array
 
-        output = self.model(x_tensor)
-        predicted = torch.max(output.data, 1)[1]
+        output = self.model(x_tensor)                                       # run x_tensor through model        # output? is it a tensor w/ probabilities for each label?
+        predicted = torch.max(output.data, 1)[1]                            # get index (label) of item w/ highest probability
 
-        predict_label = predicted.to(torch.device("cpu")).detach().numpy()
+        predict_label = predicted.to(torch.device("cpu")).detach().numpy()  # changes tensor into array
 
-        predict_label = self.smooth_predictions_v2(predict_label)
+        predict_label = self.smooth_predictions_v2(predict_label)           # smoothen predictions in 2 ways
         predict_label = self.smooth_predictions_v1(predict_label)
 
-        return self.get_speech_intervals(signal, predict_label)
+        return self.get_speech_intervals(signal, predict_label)             # return speech intervals   # why are we passing in labels?
 
 
-class ResnetBlock(nn.Module):
+class ResnetBlock(nn.Module):               # one Resnet block
 
     def __init__(
         self,
-        in_channels: int,
-        out_channels: int,
-        num_kernels1: tuple,
-        num_kernels2: int,
+        in_channels: int,                   # 1
+        out_channels: int,                  # 32
+        num_kernels1: tuple,                # (8, 5, 3)
+        num_kernels2: int,                  # 16
     ):
-        super(ResnetBlock, self).__init__()
+        super(ResnetBlock, self).__init__()     # is this trying to inherit from itself?
 
-        padding = same_padding(num_kernels1[0])
-        self.zero_pad = nn.ZeroPad2d((
+        padding = same_padding(num_kernels1[0])     # (3,4)
+        self.zero_pad = nn.ZeroPad2d((              # 0 0s to left/right, padding[0] (3) 0s to top, padding[1] (4) 0s to bottom
             0,
             0,
             padding[0],
-            padding[1],
+            padding[1],                             # Seems to assume that the first kernel size is always even, i.e. always returns a tuple
         ))
         self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            (num_kernels1[0], num_kernels2),
+            in_channels,                            # 1
+            out_channels,                           # 32
+            (num_kernels1[0], num_kernels2),        # Kernel size (8, 16)
         )
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.relu1 = nn.ReLU()
+        self.bn1 = nn.BatchNorm2d(out_channels)     # batch normalization (rescale + recenter)      # out_channels == num of features (32)
+        self.relu1 = nn.ReLU()                      # relu
         self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            num_kernels1[1],
-            padding=same_padding(num_kernels1[1]),
+            out_channels,                           # in_channels = 32
+            out_channels,                           # out_channels = 32
+            num_kernels1[1],                        # kernel size (5,5)
+            padding=same_padding(num_kernels1[1]),  # padding = 2
         )
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.relu2 = nn.ReLU()
+
         self.conv3 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            num_kernels1[2],
-            padding=same_padding(num_kernels1[2]),
+            out_channels,                           # in_channels = 32
+            out_channels,                           # out_channels = 32
+            num_kernels1[2],                        # kernel size (3,3)
+            padding=same_padding(num_kernels1[2]),  # padding = 1
         )
         self.bn3 = nn.BatchNorm2d(out_channels)
-        self.shortcut = nn.Conv2d(in_channels, out_channels, (1, num_kernels2))
-        self.bn_shortcut = nn.BatchNorm2d(out_channels)
-        self.out_block = nn.ReLU()
+        self.shortcut = nn.Conv2d(in_channels, out_channels, (1, num_kernels2))     # (1, 32, kernel size (1,16))           # math? --> #TODO: figure out input dimensions
+        self.bn_shortcut = nn.BatchNorm2d(out_channels)                             # batch normalization (32)
+        self.out_block = nn.ReLU()                  # final relu
 
     def forward(self, inputs):
-        x = self.zero_pad(inputs)
-        x = self.conv1(x)
+        x = self.zero_pad(inputs)                   # 0 0s to left/right, padding[0] (3) 0s to top, padding[1] (4) 0s to bottom
+        x = self.conv1(x)                           # pass x through several conv layers to get F(x)
         x = self.bn1(x)
         x = self.relu1(x)
 
@@ -260,18 +261,18 @@ class ResnetBlock(nn.Module):
         x = self.relu2(x)
 
         x = self.conv3(x)
-        x = self.bn3(x)
+        x = self.bn3(x)                             # F(x) dimensions:
 
-        shortcut = self.shortcut(inputs)
+        shortcut = self.shortcut(inputs)            # transform input to the right dimensions to add to F(x)?
         shortcut = self.bn_shortcut(shortcut)
         x = torch.add(x, shortcut)
-        out_block = self.out_block(x)
+        out_block = self.out_block(x)               # Send F(x) + x through relu
 
         return out_block
 
 
-class ConvVADModel(nn.Module):
-
+class ConvVADModel(nn.Module):                      # Residual network (made up of multiple ResnetBlocks; type of CNN): 3 residual blocks of 3 conv layers each, followed by 3 fc layers
+                                                    # What's the output of this model?
     def __init__(self):
         super(ConvVADModel, self).__init__()
 
@@ -300,13 +301,13 @@ class ConvVADModel(nn.Module):
             num_kernels2=1,
         )
 
-        self.flat = nn.Flatten()
+        self.flat = nn.Flatten()                    # flattens output (output of layers converted into a single feature vector (1D array) for inputting into next layer)
 
-        self.fc1 = nn.Linear(128 * 65, 2048)
+        self.fc1 = nn.Linear(128 * 65, 2048)        # fully connected layers
         self.relu1 = nn.ReLU()
         self.fc2 = nn.Linear(2048, 2048)
         self.relu2 = nn.ReLU()
-        self.fc3 = nn.Linear(2048, 2)
+        self.fc3 = nn.Linear(2048, 2)               # should make prediction?
 
     def forward(self, inputs):
         out_block1 = self.block1(inputs)

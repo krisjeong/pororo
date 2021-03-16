@@ -173,7 +173,7 @@ logging.getLogger("pydub").setLevel(logging.WARN)
 logging.getLogger("librosa").setLevel(logging.WARN)
 
 
-class Pororo:
+class Pororo:               # loads a user-selected, task-specific module onto chosen device (default GPU)
     r"""
     This is a generic class that will return one of the task-specific model classes of the library
     when created with the `__new__()` method
@@ -188,16 +188,16 @@ class Pororo:
         **kwargs,
     ) -> PororoTaskBase:
         if task not in SUPPORTED_TASKS:
-            raise KeyError("Unknown task {}, available tasks are {}".format(
+            raise KeyError("Unknown task {}, available tasks are {}".format(        # raise error if task unknown
                 task,
                 list(SUPPORTED_TASKS.keys()),
             ))
 
         lang = lang.lower()
-        lang = LANG_ALIASES[lang] if lang in LANG_ALIASES else lang
+        lang = LANG_ALIASES[lang] if lang in LANG_ALIASES else lang                 # convert lang str to lang label
 
         # Get device information from torch API
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")       # device: use GPU if available
 
         # Instantiate task-specific pipeline module, if possible
         task_module = SUPPORTED_TASKS[task](
@@ -205,7 +205,7 @@ class Pororo:
             lang,
             model,
             **kwargs,
-        ).load(device)
+        ).load(device)                                                              # load (in asr.py l89) user-selected, task-specific module on device
 
         return task_module
 
@@ -218,12 +218,12 @@ class Pororo:
             str: Supported task names
 
         """
-        return "Available tasks are {}".format(list(SUPPORTED_TASKS.keys()))
+        return "Available tasks are {}".format(list(SUPPORTED_TASKS.keys()))        # returns all available tasks
 
     @staticmethod
     def available_models(task: str) -> str:
         """
-        Returns available model names correponding to the user-input task
+        Returns available model names correponding to the user-input task       # returns all available model names
 
         Args:
             task (str): user-input task name
@@ -240,8 +240,8 @@ class Pororo:
                 "Unknown task {} ! Please check available models via `available_tasks()`"
                 .format(task))
 
-        langs = SUPPORTED_TASKS[task].get_available_models()
+        langs = SUPPORTED_TASKS[task].get_available_models()                # all possible models
         output = f"Available models for {task} are "
         for lang in langs:
-            output += f"([lang]: {lang}, [model]: {', '.join(langs[lang])}), "
+            output += f"([lang]: {lang}, [model]: {', '.join(langs[lang])}), "      # output: lang: en, model: model_name
         return output[:-2]

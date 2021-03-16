@@ -20,9 +20,9 @@ from pororo.models.wav2vec2.utils import collate_fn, get_mask_from_lengths
 
 
 class BrainWav2Vec2Recognizer(object):
-    """ Wav2Vec 2.0 Speech Recognizer """
+    """ Wav2Vec 2.0 Speech Recognizer """                   # TODO: figure out purpose
 
-    graphemes = {
+    graphemes = {                                           # smallest functional unit of writing system
         "ko": [
             "ᅡ", "ᄋ", "ᄀ", "ᅵ", "ᆫ", "ᅳ", "ᅥ", "ᅩ", "ᄂ", "ᄃ", "ᄌ", "ᆯ", "ᄅ",
             "ᄉ", "ᅦ", "ᄆ", "ᄒ", "ᅢ", "ᅮ", "ᆼ", "ᆨ", "ᅧ", "ᄇ", "ᆻ", "ᆷ", "ᅣ",
@@ -48,7 +48,7 @@ class BrainWav2Vec2Recognizer(object):
         self.target_dict = Dictionary.load(dict_path)
 
         self.lang = lang
-        self.graphemes = BrainWav2Vec2Recognizer.graphemes[lang]
+        self.graphemes = BrainWav2Vec2Recognizer.graphemes[lang]        # None if en or zh
         self.device = device
 
         self.collate_fn = collate_fn
@@ -57,13 +57,13 @@ class BrainWav2Vec2Recognizer(object):
         self.vad_model = vad_model
 
     def _load_model(self, model_path: str, device: str, target_dict) -> list:
-        w2v = torch.load(model_path, map_location=device)
-        model = BrainWav2VecCtc.build_model(
-            w2v["args"],
+        w2v = torch.load(model_path, map_location=device)               # w2v = load model (pre-trained?) as object
+        model = BrainWav2VecCtc.build_model(                            # build wav2vec model
+            w2v["args"],                                                    # w/ info from pretrained model?
             target_dict,
             w2v["pretrain_args"],
         )
-        model.load_state_dict(w2v["model"], strict=True)
+        model.load_state_dict(w2v["model"], strict=True)                # copies parameters and buffers from w2v["model"]
         model.eval().to(self.device)
         return [model]
 
