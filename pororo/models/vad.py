@@ -41,7 +41,7 @@ class VoiceActivityDetection(object):           # returns speech intervals
 
         self.model.to(device).eval()        # sets module on evaluation mode
 
-    def extract_features(                   # extracts features (mfcc, delta, delta-delta, and rmse) as one transposed array
+    def extract_features(  # extracts features (mfcc, delta, delta-delta, and rmse) as one transposed array
         self,
         signal,
         size: int = 512,
@@ -175,7 +175,7 @@ class VoiceActivityDetection(object):           # returns speech intervals
 
         return speech_intervals
 
-    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance is called as fn
+    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance (vad_model) called as a fn (recognizer.py l143)
         seguence_signal = list()
 
         self.sample_rate = sample_rate
@@ -271,12 +271,12 @@ class ResnetBlock(nn.Module):               # one Resnet block
         return out_block
 
 
-class ConvVADModel(nn.Module):                      # Residual network (made up of multiple ResnetBlocks; type of CNN): 3 residual blocks of 3 conv layers each, followed by 3 fc layers
+class ConvVADModel(nn.Module):                      # Residual network (made up of multiple ResnetBlocks; type of CNN): 4 residual blocks of 3 conv layers each, followed by 3 fc layers
                                                     # What's the output of this model?
     def __init__(self):
         super(ConvVADModel, self).__init__()
 
-        self.block1 = ResnetBlock(
+        self.block1 = ResnetBlock(                  # Help w/ math?
             in_channels=1,
             out_channels=32,
             num_kernels1=(8, 5, 3),

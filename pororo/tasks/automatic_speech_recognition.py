@@ -104,7 +104,7 @@ class PororoAsrFactory(PororoFactoryBase):
             )
         from pororo.models.wav2vec2.recognizer import BrainWav2Vec2Recognizer       # Wav2Vec 2.0 Speech Recognizer
 
-        model_path = download_or_load(                      # Download or load model based on model information
+        model_path = download_or_load(                      # Download or load model based on model information (to be passed into instances of vad_model and model)
             f"misc/{self.config.n_model}.pt",
             self.config.lang,
         )
@@ -138,10 +138,10 @@ class PororoAsrFactory(PororoFactoryBase):
             device=device,
             lang=self.config.lang,
         )
-        return PororoASR(model, self.config)
+        return PororoASR(model, self.config)                #
 
 
-class PororoASR(PororoSimpleBase):
+class PororoASR(PororoSimpleBase):                          # Preprocesses audio + conducts the speech recognition part?
 
     def __init__(self, model, config):
         super().__init__(config)
@@ -160,8 +160,8 @@ class PororoASR(PororoSimpleBase):
         except ImportError:
             raise ImportError("Please install pydub: pip install pydub")
 
-        audio_extension = audio_path.split('.')[-1].lower()
-        assert audio_extension in (
+        audio_extension = audio_path.split('.')[-1].lower()             # wav
+        assert audio_extension in (                                     # raise error if not one of these
             'wav', 'mp3', 'flac',
             'pcm'), f"Unsupported format: {audio_extension}"
 
@@ -173,23 +173,23 @@ class PororoASR(PororoSimpleBase):
             ).astype('float32')
 
         else:
-            sample_rate = librosa.get_samplerate(audio_path)
-            signal = AudioSegment.from_file(
+            sample_rate = librosa.get_samplerate(audio_path)            # sample_rate: number of samples per second (or per other unit) taken from a continuous signal to make a discrete or digital signal.
+            signal = AudioSegment.from_file(                            # extracts signal?
                 audio_path,
                 format=audio_extension,
                 frame_rate=sample_rate,
             )
 
             if sample_rate != self.SAMPLE_RATE:
-                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)
+                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match sample rate
 
             channel_sounds = signal.split_to_mono()
             signal = np.array(
                 [s.get_array_of_samples() for s in channel_sounds])[0]
 
-        return signal / self.MAX_VALUE
+        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE
 
-    def predict(
+    def predict(                                                                # check when is this called? Predict is called when an object of PororoSimpleBase is called as a fn; does the same happen when PororoASR is called as (asr('filepath'))?
         self,
         audio_path: str,
         **kwargs,
@@ -202,19 +202,19 @@ class PororoASR(PororoSimpleBase):
             top_db (int): the threshold (in decibels) below reference to consider as silence (default: 48)
             batch_size (int): inference batch size (default: 1)
             vad (bool): flag indication whether to use voice activity detection or not, If it is False, it is split into
-             dB criteria and then speech recognition is made. Applies only when audio length is more than 50 seconds.
+             dB criteria and then speech recognition is made. Applies only when audio length is more than 50 seconds.       # ?
 
         Returns:
             dict: result of speech recognition
 
         """
-        top_db = kwargs.get("top_db", 48)
+        top_db = kwargs.get("top_db", 48)                                       # returns value of 'top_db'; 48 by default
         batch_size = kwargs.get("batch_size", 1)
         vad = kwargs.get("batch_size", False)
 
-        signal = self._preprocess_audio(audio_path)
+        signal = self._preprocess_audio(audio_path)                             # preprocess audio
 
-        return self._model.predict(
+        return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict()?
             audio_path=audio_path,
             signal=signal,
             top_db=top_db,
