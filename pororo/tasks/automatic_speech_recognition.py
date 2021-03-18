@@ -141,7 +141,7 @@ class PororoAsrFactory(PororoFactoryBase):
         return PororoASR(model, self.config)                #
 
 
-class PororoASR(PororoSimpleBase):                          # Preprocesses audio + conducts the speech recognition part?
+class PororoASR(PororoSimpleBase):                          """preprocesses audio + calls on model (Wav2Vec2Recognizer) to predict (conduct speech recognition for audio in a given path and return dict result+dict)"""
 
     def __init__(self, model, config):
         super().__init__(config)
@@ -214,7 +214,7 @@ class PororoASR(PororoSimpleBase):                          # Preprocesses audio
 
         signal = self._preprocess_audio(audio_path)                             # preprocess audio
 
-        return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict()?
+        return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict() check?
             audio_path=audio_path,
             signal=signal,
             top_db=top_db,

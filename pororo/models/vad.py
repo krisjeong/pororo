@@ -16,7 +16,7 @@ def same_padding(kernel):           # kernel = 8
     return out                      # output = padding on 1 side
 
 
-class VoiceActivityDetection(object):           # returns speech intervals
+class VoiceActivityDetection(object):           """returns speech intervals"""
     """
     Voice activity detection (VAD), also known as speech activity detection or speech detection,
     is the detection of the presence or absence of human speech, used in speech processing.
@@ -37,7 +37,7 @@ class VoiceActivityDetection(object):           # returns speech intervals
         self.device = device
 
         self.model = ConvVADModel()         # model = ConvVADModel (residual network)
-        self.model.load_state_dict(torch.load(model_path, map_location=device))     # TODO: examine
+        self.model.load_state_dict(torch.load(model_path, map_location=device))     # TODO: examine     # Loads a model’s parameter dictionary using a deserialized state_dict.
 
         self.model.to(device).eval()        # sets module on evaluation mode
 

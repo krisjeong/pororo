@@ -19,8 +19,8 @@ from pororo.models.wav2vec2.submodules import (
 from pororo.models.wav2vec2.utils import collate_fn, get_mask_from_lengths
 
 
-class BrainWav2Vec2Recognizer(object):
-    """ Wav2Vec 2.0 Speech Recognizer """                   # TODO: figure out purpose
+class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & builds and returns 'result_dict' (containing "audio", "duration", and "results") """
+    """ Wav2Vec 2.0 Speech Recognizer """
 
     graphemes = {                                           # smallest functional unit of writing system
         "ko": [
@@ -52,7 +52,7 @@ class BrainWav2Vec2Recognizer(object):
         self.device = device
 
         self.collate_fn = collate_fn                                    # merges a list of samples to form a mini-batch of Tensor(s) (returns tensor 'inputs' and int tensor 'input_lengths')
-        self.model = self._load_model(model_path, device, self.target_dict)
+        self.model = self._load_model(model_path, device, self.target_dict)     # Wav2Vec model
         self.generator = W2lViterbiDecoder(self.target_dict)
         self.vad_model = vad_model
 
@@ -121,7 +121,7 @@ class BrainWav2Vec2Recognizer(object):
         return speech_intervals
 
     @torch.no_grad()
-    def predict(                                                                # called from automatic_speech_recognition.py l217?
+    def predict(                                                                # called from automatic_speech_recognition.py l217?     # builds and returns result_dict (containing “audio”, “duration”, “results”)
         self,
         audio_path: str,
         signal: np.ndarray,
@@ -137,7 +137,7 @@ class BrainWav2Vec2Recognizer(object):
         result_dict["audio"] = audio_path
         result_dict["duration"] = str(datetime.timedelta(seconds=duration))         # str(duration of audio found by subtracting)
         result_dict["results"] = list()
-
+                                                                                # building up empty "results" list (by building dict 'hypo_dict' and appending to list 'results')
         if batch_inference:                                                         # if duration > 50s:
             if vad:                                                                     # if vad:
                 speech_intervals = self.vad_model(                                          # 'speech_intervals' = model output (VoiceActivityDetection; vad.py); since call on object, goes to __call__ (vad.py l178)
@@ -163,11 +163,11 @@ class BrainWav2Vec2Recognizer(object):
                 sample["net_input"] = net_input                                             # ?
 
                 # yapf: disable
-                if sample["net_input"]["source"].size(1) < self.MINIMUM_INPUT_LENGTH:
+                if sample["net_input"]["source"].size(1) < self.MINIMUM_INPUT_LENGTH:       # ?
                     continue
                 # yapf: enable
 
-                hypos = self.generator.generate(                                            # Generate a batch of inferences
+                hypos = self.generator.generate(                                            # Generate a batch of inferences using wav2vec model
                     self.model,
                     sample,
                     prefix_tokens=None,
@@ -175,7 +175,7 @@ class BrainWav2Vec2Recognizer(object):
 
                 for hypo_idx, hypo in enumerate(hypos):                                     # For each inference:       # what is hypo--is it a word? a letter?
                     hypo_dict = dict()
-                    hyp_pieces = self.target_dict.string(                                       # dict = target dict loaded from FB; hyp_pieces: all possible tokens?
+                    hyp_pieces = self.target_dict.string(                                       # dict = target dict loaded from FB;    # TODO: hyp_pieces: all possible tokens?
                         hypo[0]["tokens"].int().cpu())
                     speech_section = total_speech_sections[batch_idx][hypo_idx]                 # get dict 'speech_section' of time (keys: start, end) for this section
 
@@ -192,10 +192,10 @@ class BrainWav2Vec2Recognizer(object):
                                 0,
                             ))))
 
-                    # yapf: disable                                                         # hypo_dict: what's printed out when asr is run (inside dict 'results')
+                    # yapf: disable                                                         # hypo_dict: dict printed out when asr is run (inside dict 'results')
                     hypo_dict["speech_section"] = f"{speech_start_time} ~ {speech_end_time}"    # time stamps for segment
-                    hypo_dict["length_ms"] = total_durations[batch_idx][hypo_idx] * 1000        # 'total_durations': list (of 'duration')
-                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # clean up text from dict?
+                    hypo_dict["length_ms"] = total_durations[batch_idx][hypo_idx] * 1000        # 'total_durations': list (of 'duration'); getting ith duration
+                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # clean up text from dict?  # TODO: further examine
                     # yapf: enable
 
                     if hypo_dict["speech"]:                                                     # if the text is not empty:
@@ -208,31 +208,31 @@ class BrainWav2Vec2Recognizer(object):
 
             feature, duration = self._parse_audio(signal)                                   # feature (tensor ver of signal) and duration (in sec)
 
-            net_input["source"] = feature.unsqueeze(0).to(self.device)                      # add a dimension of 1 in index 0
+            net_input["source"] = feature.unsqueeze(0).to(self.device)                      # add a dimension of 1 in index 0 to feature        # TODO: figure out math
 
-            padding_mask = torch.BoolTensor(
+            padding_mask = torch.BoolTensor(                                                # ?
                 net_input["source"].size(1)).fill_(False)
             net_input["padding_mask"] = padding_mask.unsqueeze(0).to(
                 self.device)
 
-            sample["net_input"] = net_input
+            sample["net_input"] = net_input                                                 # add dict 'net_input' to dict 'sample'
 
-            hypo = self.generator.generate(
+            hypo = self.generator.generate(                                                 # Generate a batch of inferences using wav2vec model
                 self.model,
                 sample,
                 prefix_tokens=None,
             )
-            hyp_pieces = self.target_dict.string(
-                hypo[0][0]["tokens"].int().cpu())
+            hyp_pieces = self.target_dict.string(                                           # target_dict = target dict loaded from FB; hyp_pieces?
+                hypo[0][0]["tokens"].int().cpu())                                           # hypo[0][0] (Cf. hypo[0])
 
-            speech_start_time = str(datetime.timedelta(seconds=0))
+            speech_start_time = str(datetime.timedelta(seconds=0))                          # start_time set to 0
             speech_end_time = str(
-                datetime.timedelta(seconds=int(round(duration, 0))))
+                datetime.timedelta(seconds=int(round(duration, 0))))                        # end_time
 
             hypo_dict[
-                "speech_section"] = f"{speech_start_time} ~ {speech_end_time}"
-            hypo_dict["length_ms"] = duration * 1000
-            hypo_dict["speech"] = self._text_postprocess(hyp_pieces)
+                "speech_section"] = f"{speech_start_time} ~ {speech_end_time}"              # fill up 'hypo_dict' (dict inside 'results')
+            hypo_dict["length_ms"] = duration * 1000                                        # total_durations[batch_idx][hypo_idx] * 1000
+            hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                        # TODO: further examine
 
             if hypo_dict["speech"]:
                 result_dict["results"].append(hypo_dict)
