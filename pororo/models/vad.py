@@ -16,7 +16,7 @@ def same_padding(kernel):           # kernel = 8
     return out                      # output = padding on 1 side
 
 
-class VoiceActivityDetection(object):           """returns speech intervals"""
+class VoiceActivityDetection(object):           """returns speech intervals (after removing silence)"""
     """
     Voice activity detection (VAD), also known as speech activity detection or speech detection,
     is the detection of the presence or absence of human speech, used in speech processing.
@@ -37,7 +37,7 @@ class VoiceActivityDetection(object):           """returns speech intervals"""
         self.device = device
 
         self.model = ConvVADModel()         # model = ConvVADModel (residual network)
-        self.model.load_state_dict(torch.load(model_path, map_location=device))     # TODO: examine     # Loads a model’s parameter dictionary using a deserialized state_dict.
+        self.model.load_state_dict(torch.load(model_path, map_location=device))     # Loads a model’s parameter dictionary (from the one we downloaded in asr.py l115) using a deserialized state_dict.
 
         self.model.to(device).eval()        # sets module on evaluation mode
 
@@ -66,7 +66,7 @@ class VoiceActivityDetection(object):           """returns speech intervals"""
             n_fft=size,                                                 # length of FFT (fast Fourier transforms) window
             hop_length=step,                                            # number of samples between successive frames/adjacent STFT columns
         )
-        rmse = self.librosa.feature.rms(                            # Compute RMS for each frame in mel spectrogram
+        rmse = self.librosa.feature.rms(                            # Compute RMS (Root Mean Square) for each frame in mel spectrogram
             S=melspectrogram,
             frame_length=self.n_mels * 2 - 1,
             hop_length=step,
@@ -181,7 +181,7 @@ class VoiceActivityDetection(object):           """returns speech intervals"""
         self.sample_rate = sample_rate
         start_pointer = 0
         end_pointer = 1024
-
+                                                                        # Cut up signal using start and end pointers and append to list ‘seguence_signal’
         while end_pointer < len(signal):                                    # while end pointer is smaller than signal length:
             seguence_signal.append(signal[start_pointer:end_pointer])           # append: slice of signal from start to end ptr
 
