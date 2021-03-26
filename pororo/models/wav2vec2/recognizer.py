@@ -94,9 +94,9 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         """
         Postprocess model output
         Args:
-            sentence (str): naively inferenced sentence from model
+            sentence (str): naively inferenced sentence from model      ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅣ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄉ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ |
         Returns:
-            str: post-processed, inferenced sentence
+            str: post-processed, inferenced sentence                    '그는 괜찮은 척하려고 애 쓰는 거 같았다 그냐에 사랑을 얻기 위해 애 썼지만 헛스고였다'}]
         """
         if self.graphemes:
             # grapheme to character
@@ -147,16 +147,16 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
             else:                                                                       # else:
                 speech_intervals = self._split_audio(signal, top_db)                        # get list of non-silent intervals from audio
 
-            batches, total_speech_sections, total_durations = self._create_batches(     # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (of dicts 'speech_section' of time (keys: start, end)), 'total_durations' (of 'duration')
+            batches, total_speech_sections, total_durations = self._create_batches(      # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (list of list 'speech_sections (for 1 batch)' of dicts 'speech_section' for 1 interval, shape {"start": START_TIME, "end": END_TIME}), 'total_durations' (of 'duration')
                 speech_intervals,
                 batch_size,
             )
 
-            for batch_idx, batch in enumerate(batches):                                 # for each batch:
+            for batch_idx, batch in enumerate(batches):                                 # for each batch:       # TODO: ==for each audio sample?
                 net_input, sample = dict(), dict()
 
                 net_input["padding_mask"] = get_mask_from_lengths(                          # What's going on?
-                    inputs=batch["inputs"],
+                    inputs=batch["inputs"],                                                 # net_input["padding_mask"] =
                     seq_lengths=batch["input_lengths"],
                 ).to(self.device)
                 net_input["source"] = batch["inputs"].to(self.device)                       # ?
@@ -167,17 +167,18 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                     continue
                 # yapf: enable
 
-                hypos = self.generator.generate(                                            # Generate a batch of inferences using wav2vec model
-                    self.model,
-                    sample,
+                hypos = self.generator.generate(                                            # Generate a batch of inferences (for each batch (sentence?), generate tensor using wav2vec model
+                    self.model,                                                             # list of list of dict {'tokens': tensor of ints, 'score: 0}
+                    sample,                                                                 # [{'tokens': tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26, 22,  6, 18, 27,  8, 13,  5,  7, 23,  5, 49, 11, 14, 11, 10,  5,  8, 12,  5,  8,  6, 46,  7,  6, 29, 15,  6,  5,  8, 11, 14, 31,  7, 20,  5, 19,  6, 18,  6, 25,  7, 11, 17,  5,  7, 12, 59,  8,  9,  5,  7, 56, 22, 23,  5,  7, 23,  5, 49, 12, 29, 16,  9, 21,  6, 10,  5, 22, 12, 43, 19,11,  8, 13,  7, 27, 29, 15,  6,  5]), 'score': 0}]
+
                     prefix_tokens=None,
                 )
 
-                for hypo_idx, hypo in enumerate(hypos):                                     # For each inference:       # what is hypo--is it a word? a letter?
+                for hypo_idx, hypo in enumerate(hypos):                                     # For each inference (i.e. for 1 section):       # what is hypo--is it a word? a letter?
                     hypo_dict = dict()
-                    hyp_pieces = self.target_dict.string(                                       # dict = target dict loaded from FB;    # TODO: hyp_pieces: all possible tokens?
-                        hypo[0]["tokens"].int().cpu())
-                    speech_section = total_speech_sections[batch_idx][hypo_idx]                 # get dict 'speech_section' of time (keys: start, end) for this section
+                    hyp_pieces = self.target_dict.string(                                       # convert tensor of ints to string (letters) using dict --> hyp_pieces: all tokens (letter by letter),
+                        hypo[0]["tokens"].int().cpu())                                          # dict = target dict loaded from FB;
+                    speech_section = total_speech_sections[batch_idx][hypo_idx]                 # get dict 'speech_section' (for this section); {"start": START_TIME, "end": END_TIME}
 
                     speech_start_time = str(                                                    # get rounded str ver of start time (e.g. 0:00:00)
                         datetime.timedelta(
@@ -195,7 +196,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                     # yapf: disable                                                         # hypo_dict: dict printed out when asr is run (inside dict 'results')
                     hypo_dict["speech_section"] = f"{speech_start_time} ~ {speech_end_time}"    # time stamps for segment
                     hypo_dict["length_ms"] = total_durations[batch_idx][hypo_idx] * 1000        # 'total_durations': list (of 'duration'); getting ith duration
-                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # clean up text from dict?  # TODO: further examine
+                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # puts individual letters together to make proper sentence
                     # yapf: enable
 
                     if hypo_dict["speech"]:                                                     # if the text is not empty:
@@ -241,24 +242,24 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
     def _create_batches(
         self,
-        speech_intervals: list,                                         # speech_intervals: list of all non-silent intervals from audio
+        speech_intervals: list,                                         # speech_intervals: list of all non-silent intervals from audio; for 'korean_sample2.wav', it's 2
         batch_size: int = 1,
     ) -> Tuple[list, list, list]:
         batches = list()
-        total_speech_sections = list()
+        total_speech_sections = list()                                  # total_speech_sections: [
         total_durations = list()
 
         cumulative_duration = 0
-        num_batches = math.ceil(len(speech_intervals) / batch_size)     # num_batches = (total tokens / bath size)
+        num_batches = math.ceil(len(speech_intervals) / batch_size)     # num_batches = (total tokens / batch size); for 'korean_sample2.wav', it's 2
 
         for batch_idx in range(num_batches):                            # for each batch:
-            sample = list()                                                 # list of features (tensor ver of signal for an interval)
+            sample = list()                                                 # list of feature tensors (tensor ver of signal for an interval) for each interval
             speech_sections = list()                                        # list of dicts (dict: speech_section (keys: start, end))
             durations = list()                                              # list of duration (in secs)
 
             for idx in range(batch_size):                                   # for each item in batch:
-                speech_section = dict()                                         # speech_section dict (holds TIME for start and end)
-                speech_intervals_idx = batch_idx * batch_size + idx             # index of this speech interval (#)
+                speech_section = dict()                                         # speech_section dict for item {"start": START_TIME, "end: END_TIME}
+                speech_intervals_idx = batch_idx * batch_size + idx             # index of this speech interval (#) in set 'speech_intervals'
 
                 if len(speech_intervals) > speech_intervals_idx:                # if there still are tokens left:
                     feature, duration = self._parse_audio(                          # feature (tensor ver of signal (specific interval)) and duration (in sec)
@@ -283,6 +284,6 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
             batches.append(batch)                                           # add batch to list 'batches'
             total_speech_sections.append(speech_sections)                   # add overall list 'speech_sections' (for one batch) to list 'total_speech_sections'
-            total_durations.append(durations)                               # add list of duration (in secs; for one batch) to list 'total_durations'
+            total_durations.append(durations)                               # add list of duration (in secs; 1 duration for each batch) to list 'total_durations'
 
-        return batches, total_speech_sections, total_durations              # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (of dicts 'speech_section' of time (keys: start, end)), 'total_durations' (of 'duration')
+        return batches, total_speech_sections, total_durations              # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (list of list 'speech_sections' for 1 section of dicts 'speech_section' of time list 'total_speech_sections' of list 'speech_sections (for 1 batch)' of dicts 'speech_section' for 1 interval, shape {"start": START_TIME, "end": END_TIME)), 'total_durations' (of 'duration')

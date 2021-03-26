@@ -86,7 +86,7 @@ class PororoAsrFactory(PororoFactoryBase):
             "zh": ["wav2vec.zh"],
         }
 
-    def load(self, device: str):                    # Load user-selected task-specific model
+    def load(self, device: str):                    # Load user-selected task-specific model (PororoASR)
         """
         Load user-selected task-specific model
 
@@ -187,7 +187,7 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             signal = np.array(
                 [s.get_array_of_samples() for s in channel_sounds])[0]
 
-        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE
+        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE (
 
     def predict(                                                                # check when is this called? Predict is called when an object of PororoSimpleBase is called as a fn; does the same happen when PororoASR is called as (asr('filepath'))?
         self,
