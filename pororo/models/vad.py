@@ -31,7 +31,7 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
 
         self.librosa = librosa              # package for music and audio analysis
 
-        self.sample_rate = 16000
+        self.sample_rate = 16000            # sampling rate of y (# samples taken per second, from continuous signal to make it discrete/digital)
         self.n_mfcc = 5                     # ? Mel-frequency cepstral coefficients (MFC = represents short-term power spectrum (frequency components) of a sound)
         self.n_mels = 40                    # kind of like frequency?
         self.device = device
@@ -145,35 +145,34 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
             smoothed_label.append(smoothed_label[-1])               # pad w/ last elem to match size w/ original label
 
         return smoothed_label
-
-    def get_speech_intervals(self, data, label):                # TODO: check what 'label' and 'data' are
-
-        def get_speech_interval(labels):                            # 'label'
+    # TODO: must figure out how 'label' is generated
+    def get_speech_intervals(self, data, label):                    # data: numpy.ndarray type; length 211883; (mel?) frequency per frame, over 211883 frames; divided by sequence_length (1024) and makes 206 sequences, which are each given a label of 0 (silence) or 1 (voice) by the model?
+        """uses labels list to build 'speech_interval' list of interval lists [start_frame, end_frame] that it extracted from 'data'"""
+        def get_speech_interval(labels):                            # 'label': list of 0 (silence)s and 1 (voice), length 206; list of labels for each part/sequence; each group of consecutive 1s is a speech_interval
             seguence_length = 1024
-            speech_interval = [[0, 0]]
-            pre_label = 0
-
-            for idx, label in enumerate(labels):                    # for each label:
-
-                if label:                                           # if label != 0?
-                    if pre_label == 1:                              # What's going on?
-                        speech_interval[-1][1] = (idx + 1) * seguence_length
-                    else:
-                        speech_interval.append([
-                            idx * seguence_length, (idx + 1) * seguence_length
+            speech_interval = [[0, 0]]                              # list of intervals (start_frame, end_frame)
+            pre_label = 0                                           # label before 'label'
+            for idx, label in enumerate(labels):                    # for each of the 206 labels:
+                # skip past index if label == 0 (so, skips 0s & stops once label = 0)
+                if label:                                           # if label != 0:
+                    if pre_label == 1:                              # if right before is 1 (i.e. middle of continuous sequence):
+                        speech_interval[-1][1] = (idx + 1) * seguence_length    # extend interval by changing end of sequence by 1024
+                    else:                                           # if start of sequence:
+                        speech_interval.append([                        # add new interval to 'speech_interval' (start_idx, end_idx)
+                            idx * seguence_length, (idx + 1) * seguence_length      #
                         ])
 
-                pre_label = label
+                pre_label = label                                   # update pre_label to current label
 
-            return speech_interval[1:]
+            return speech_interval[1:]                              # return all the speech intervals exc. the placeholder [0,0]
 
-        speech_intervals = list()
-        interval = get_speech_interval(label)                       # list of lists
+        speech_intervals = list()                                   # list of arrays (of various sizes)
+        interval = get_speech_interval(label)                       # 'interval' = 'speech_interval' list of interval lists [start_frame, end_frame]    #  [[2048, 31744], [41984, 65536], [78848, 122880], [134144, 151552], [164864, 178176], [198656, 210944]]
 
         for start, end in interval:
-            speech_intervals.append(data[start:end])
+            speech_intervals.append(data[start:end])                # using start and end indices from 'speech_interval', index into data (to get frequencies) between them and add them to speech_intervals
 
-        return speech_intervals
+        return speech_intervals                                     # 'speech_intervals' = list of arrays (sequences of frequencies from start_frame to end_frame)
 
     def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance (vad_model) called as a fn (recognizer.py l143)
         seguence_signal = list()
@@ -192,17 +191,17 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
 
         feature = np.array(feature)                                         # turn into array
         feature = np.expand_dims(feature, 1)                                # expand array shape + insert axis at 1     # what does it mean to insert an axis in 1? Ask about axes in general?
-        x_tensor = torch.from_numpy(feature).float().to(self.device)        # x_tensor = tensor version of array
+        x_tensor = torch.from_numpy(feature).float().to(self.device)        # x_tensor = tensor version of array (of the features)
 
-        output = self.model(x_tensor)                                       # run x_tensor through model        # output? is it a tensor w/ probabilities for each label?
-        predicted = torch.max(output.data, 1)[1]                            # get index (label) of item w/ highest probability
+        output = self.model(x_tensor)                                       # ‘Output’ = tensor shaped [206, 2] (206 tuples); result of running model on ‘x_tensor’; shows, for each sequence, the probability that it is label (==index) 0 (silence) vs. label 1 (voice)?
+        predicted = torch.max(output.data, 1)[1]                            # 'predicted' = tensor of labels for each interval (with the highest probability); tensor of 206x1 (each row = argmax of the two)
 
-        predict_label = predicted.to(torch.device("cpu")).detach().numpy()  # changes tensor into array
+        predict_label = predicted.to(torch.device("cpu")).detach().numpy()  # array version of tensor
 
-        predict_label = self.smooth_predictions_v2(predict_label)           # smoothen predictions in 2 ways
-        predict_label = self.smooth_predictions_v1(predict_label)
+        predict_label = self.smooth_predictions_v2(predict_label)           # smoothen predictions in 2 ways (probably just getting rid of outliers?)
+        predict_label = self.smooth_predictions_v1(predict_label)           # v2 seems to do the job though?    # TODO: figure out later (not that important)
 
-        return self.get_speech_intervals(signal, predict_label)             # return speech intervals   # why are we passing in labels?
+        return self.get_speech_intervals(signal, predict_label)             # get speech intervals (list of lists of frequencies over interval frames) by using list of labels (0 or 1)
 
 
 class ResnetBlock(nn.Module):               # one Resnet block
@@ -272,7 +271,7 @@ class ResnetBlock(nn.Module):               # one Resnet block
 
 
 class ConvVADModel(nn.Module):                      # Residual network (made up of multiple ResnetBlocks; type of CNN): 4 residual blocks of 3 conv layers each, followed by 3 fc layers
-                                                    # What's the output of this model?
+                                                    # Output: tensor [num_sequences (total frames/sequence length), 2]: shows, for each sequence, the probability that it is label (==index) 0 (silence) vs. label 1 (voice)
     def __init__(self):
         super(ConvVADModel, self).__init__()
 
