@@ -86,7 +86,7 @@ class PororoAsrFactory(PororoFactoryBase):
             "zh": ["wav2vec.zh"],
         }
 
-    def load(self, device: str):                    # Load user-selected task-specific model (PororoASR)
+    def load(self, device: str):                    # Load & instantiate user-selected task-specific model (vad_model, PororoASR)
         """
         Load user-selected task-specific model
 
@@ -138,18 +138,18 @@ class PororoAsrFactory(PororoFactoryBase):
             device=device,
             lang=self.config.lang,
         )
-        return PororoASR(model, self.config)                #
+        return PororoASR(model, self.config)                # instantiate object of PororoASR
 
 
 class PororoASR(PororoSimpleBase):                          """preprocesses audio + calls on model (Wav2Vec2Recognizer) to predict (conduct speech recognition for audio in a given path and return dict result+dict)"""
 
-    def __init__(self, model, config):
+    def __init__(self, model, config):                      # model = BrainWav2Vec2Recognizer
         super().__init__(config)
         self._model = model
         self.SAMPLE_RATE = 16000
         self.MAX_VALUE = 32767
 
-    def _preprocess_audio(self, audio_path: str):
+    def _preprocess_audio(self, audio_path: str):           # loads audio file and returns 'signal'/MAX_VALUE
         try:
             import librosa
         except ImportError:
@@ -160,7 +160,7 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
         except ImportError:
             raise ImportError("Please install pydub: pip install pydub")
 
-        audio_extension = audio_path.split('.')[-1].lower()             # wav
+        audio_extension = audio_path.split('.')[-1].lower()             # "wav"
         assert audio_extension in (                                     # raise error if not one of these
             'wav', 'mp3', 'flac',
             'pcm'), f"Unsupported format: {audio_extension}"
@@ -173,8 +173,8 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             ).astype('float32')
 
         else:
-            sample_rate = librosa.get_samplerate(audio_path)            # sample_rate: number of samples per second (or per other unit) taken from a continuous signal to make a discrete or digital signal.
-            signal = AudioSegment.from_file(                            # extracts signal?
+            sample_rate = librosa.get_samplerate(audio_path)            # sample_rate: number of samples (==frames) per second (or per other unit) taken from a continuous signal to make a discrete or digital signal.
+            signal = AudioSegment.from_file(                            # 'signal' = audio file (from_file opens and loads audio file)
                 audio_path,
                 format=audio_extension,
                 frame_rate=sample_rate,
@@ -184,12 +184,12 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
                 signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match sample rate
 
             channel_sounds = signal.split_to_mono()
-            signal = np.array(
+            signal = np.array(                                                  # 'signal' converted to np.array of samples
                 [s.get_array_of_samples() for s in channel_sounds])[0]
 
-        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE (
+        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits
 
-    def predict(                                                                # check when is this called? Predict is called when an object of PororoSimpleBase is called as a fn; does the same happen when PororoASR is called as (asr('filepath'))?
+    def predict(                                                                # Called when asr('filepath') made bc 'predict' is called when an object of PororoSimpleBase is called as a fn (__call__)
         self,
         audio_path: str,
         **kwargs,
@@ -208,13 +208,13 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             dict: result of speech recognition
 
         """
-        top_db = kwargs.get("top_db", 48)                                       # returns value of 'top_db'; 48 by default
+        top_db = kwargs.get("top_db", 48)                                       # returns value of 'top_db' (threshold); 48 by default
         batch_size = kwargs.get("batch_size", 1)
         vad = kwargs.get("batch_size", False)
 
-        signal = self._preprocess_audio(audio_path)                             # preprocess audio
+        signal = self._preprocess_audio(audio_path)                             # preprocess audio; ndarray
 
-        return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict() check?
+        return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict(); returns result_dict (containing “audio”, “duration”, “results”)
             audio_path=audio_path,
             signal=signal,
             top_db=top_db,

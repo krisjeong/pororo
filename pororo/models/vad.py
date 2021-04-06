@@ -145,15 +145,15 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
             smoothed_label.append(smoothed_label[-1])               # pad w/ last elem to match size w/ original label
 
         return smoothed_label
-    # TODO: must figure out how 'label' is generated
-    def get_speech_intervals(self, data, label):                    # data: numpy.ndarray type; length 211883; (mel?) frequency per frame, over 211883 frames; divided by sequence_length (1024) and makes 206 sequences, which are each given a label of 0 (silence) or 1 (voice) by the model?
-        """uses labels list to build 'speech_interval' list of interval lists [start_frame, end_frame] that it extracted from 'data'"""
-        def get_speech_interval(labels):                            # 'label': list of 0 (silence)s and 1 (voice), length 206; list of labels for each part/sequence; each group of consecutive 1s is a speech_interval
+
+    def get_speech_intervals(self, data, label):                    # data: 'signal' from automatic_.py; numpy.ndarray type; length 211883; (mel?) frequency per frame, over 211883 frames; 'label' = array of 206 labels for each of the slices (length 1024) of the signal; divided by sequence_length (1024) and makes 206 sequences, which are each given a label of 0 (silence) or 1 (voice) by the model?
+        """uses labels array to build 'speech_interval' list of continuous speech interval lists [start_frame, end_frame] that it extracted from 'data'"""
+        def get_speech_interval(labels):                            # 'labels': tensor of 0 (silence)s and 1 (voice), length 206; list of labels for each part/sequence; each group of consecutive 1s is a speech_interval
             seguence_length = 1024
-            speech_interval = [[0, 0]]                              # list of intervals (start_frame, end_frame)
+            speech_interval = [[0, 0]]                              # list of intervals' start/end frames (start_frame, end_frame)  # TODO: what happens to this? is this used to produce the timestamps later on?
             pre_label = 0                                           # label before 'label'
-            for idx, label in enumerate(labels):                    # for each of the 206 labels:
-                # skip past index if label == 0 (so, skips 0s & stops once label = 0)
+            for idx, label in enumerate(labels):                    # for each of the 206 labels:       # TODO: could you save frame info for every single interval here?--if you do, must keep in different dict bc signal will get sliced up like this, and then can't use model to approximate actual meaning
+                # skip past index if label == 0 (so, skips 0s & stops once label = 0)                   # TODO: maybe have dict/list for each slice, that holds start/end positions of each of the pieces in slice
                 if label:                                           # if label != 0:
                     if pre_label == 1:                              # if right before is 1 (i.e. middle of continuous sequence):
                         speech_interval[-1][1] = (idx + 1) * seguence_length    # extend interval by changing end of sequence by 1024
@@ -167,15 +167,15 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
             return speech_interval[1:]                              # return all the speech intervals exc. the placeholder [0,0]
 
         speech_intervals = list()                                   # list of arrays (of various sizes)
-        interval = get_speech_interval(label)                       # 'interval' = 'speech_interval' list of interval lists [start_frame, end_frame]    #  [[2048, 31744], [41984, 65536], [78848, 122880], [134144, 151552], [164864, 178176], [198656, 210944]]
+        interval = get_speech_interval(label)                       # 'interval' = 'speech_interval' list of continuous speech interval lists [start_frame, end_frame]    #  [[2048, 31744], [41984, 65536], [78848, 122880], [134144, 151552], [164864, 178176], [198656, 210944]]
 
         for start, end in interval:
             speech_intervals.append(data[start:end])                # using start and end indices from 'speech_interval', index into data (to get frequencies) between them and add them to speech_intervals
 
         return speech_intervals                                     # 'speech_intervals' = list of arrays (sequences of frequencies from start_frame to end_frame)
 
-    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance (vad_model) called as a fn (recognizer.py l143)
-        seguence_signal = list()
+    def __call__(self, signal: np.ndarray, sample_rate: int = 16000):       # called when instance (vad_model) called as a fn (recognizer.py l143); cuts up signal into pieces of 206 + puts them into a tensor, runs tensor through model 'ConvVADModel', makes tensor showing label 0 or 1 for each slice, and returns the speech intervals gotten from passing in the tensor of those labels in 'get_speech_intervals'
+        seguence_signal = list()                                        # contains slices of signal (of length 1024)
 
         self.sample_rate = sample_rate
         start_pointer = 0
@@ -198,10 +198,10 @@ class VoiceActivityDetection(object):           """returns speech intervals (aft
 
         predict_label = predicted.to(torch.device("cpu")).detach().numpy()  # array version of tensor
 
-        predict_label = self.smooth_predictions_v2(predict_label)           # smoothen predictions in 2 ways (probably just getting rid of outliers?)
+        predict_label = self.smooth_predictions_v2(predict_label)           # smoothen predictions in 2 ways (just getting rid of outliers)
         predict_label = self.smooth_predictions_v1(predict_label)           # v2 seems to do the job though?    # TODO: figure out later (not that important)
 
-        return self.get_speech_intervals(signal, predict_label)             # get speech intervals (list of lists of frequencies over interval frames) by using list of labels (0 or 1)
+        return self.get_speech_intervals(signal, predict_label)             # get list of speech intervals (list of lists of frequencies over interval frames) by using list of labels (0 or 1)
 
 
 class ResnetBlock(nn.Module):               # one Resnet block

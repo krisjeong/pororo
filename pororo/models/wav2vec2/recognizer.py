@@ -106,7 +106,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
         return sentence.replace(" ", "").replace("|", " ").strip()
 
-    def _split_audio(self, signal: np.ndarray, top_db: int = 48) -> list:           # break up audio into a list of non-silent intervals
+    def _split_audio(self, signal: np.ndarray, top_db: int = 48) -> list:           # break up audio into a list of non-silent intervals (==splices from 'signal', an ndarray ver of audio)
         speech_intervals = list()
         start, end = 0, 0
 
@@ -121,32 +121,32 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         return speech_intervals
 
     @torch.no_grad()
-    def predict(                                                                # called from automatic_speech_recognition.py l217?     # builds and returns result_dict (containing “audio”, “duration”, “results”)
+    def predict(                                                                # called from automatic_speech_recognition.py l217     # builds and returns result_dict (containing “audio”, “duration”, “results”)
         self,
         audio_path: str,
-        signal: np.ndarray,
+        signal: np.ndarray,                                                         # 'signal' = audio as ndarray
         top_db: int = 48,
         vad: bool = False,                                                          # vad = False first
         batch_size: int = 1,
     ) -> dict:
         result_dict = dict()
 
-        duration = librosa.get_duration(signal, sr=self.SAMPLE_RATE)                # get duration
-        batch_inference = True if duration > 50.0 else False                        # True if duration > 50s--connection to using vad if >50s? (if less than 50s, split into dB criteria and speech recognition happens)
+        duration = librosa.get_duration(signal, sr=self.SAMPLE_RATE)                # get overall duration (in seconds) from entire audio file
+        batch_inference = True if duration > 50.0 else False                        # True if duration > 50s--so can use vad if >50s (if less than 50s, split into dB criteria and speech recognition happens)
 
-        result_dict["audio"] = audio_path
-        result_dict["duration"] = str(datetime.timedelta(seconds=duration))         # str(duration of audio found by subtracting)
+        result_dict["audio"] = audio_path                                           # audio path--does NOT go through model
+        result_dict["duration"] = str(datetime.timedelta(seconds=duration))         # str(duration of audio found by subtracting)--does NOT go through model
         result_dict["results"] = list()
-                                                                                # building up empty "results" list (by building dict 'hypo_dict' and appending to list 'results')
+        """ building up empty "results" list (by building dict 'hypo_dict' and appending to list 'results') """
         if batch_inference:                                                         # if duration > 50s:
             if vad:                                                                     # if vad:
-                speech_intervals = self.vad_model(                                          # 'speech_intervals' = model output (VoiceActivityDetection; vad.py); since call on object, goes to __call__ (vad.py l178)
+                speech_intervals = self.vad_model(                                          # vad.py __call__ (l177): 'speech_intervals' = model output (of VoiceActivityDetection, which uses ConvVADModel to get the probability of the labels); list of lists of frequencies over interval frames (VoiceActivityDetection; vad.py); since call on object, goes to __call__ (vad.py l178)
                     signal,
                     sample_rate=self.SAMPLE_RATE,
                 )
             else:                                                                       # else:
-                speech_intervals = self._split_audio(signal, top_db)                        # get list of non-silent intervals from audio
-
+                speech_intervals = self._split_audio(signal, top_db)                        # rule-based: get list of non-silent intervals (==splices from 'signal', an ndarray ver of audio)from audio
+            # either way, we get a list 'speech_intervals' of splices (of non-silent intervals) of the original 'signal' ndarray
             batches, total_speech_sections, total_durations = self._create_batches(      # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (list of list 'speech_sections (for 1 batch)' of dicts 'speech_section' for 1 interval, shape {"start": START_TIME, "end": END_TIME}), 'total_durations' (of 'duration')
                 speech_intervals,
                 batch_size,
@@ -243,21 +243,21 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
     def _create_batches(
         self,
         speech_intervals: list,                                         # speech_intervals: list of all non-silent intervals from audio; for 'korean_sample2.wav', it's 2
-        batch_size: int = 1,
+        batch_size: int = 1,                                            # batch_size default 1
     ) -> Tuple[list, list, list]:
         batches = list()
         total_speech_sections = list()                                  # total_speech_sections: [
         total_durations = list()
 
         cumulative_duration = 0
-        num_batches = math.ceil(len(speech_intervals) / batch_size)     # num_batches = (total tokens / batch size); for 'korean_sample2.wav', it's 2
+        num_batches = math.ceil(len(speech_intervals) / batch_size)     # num_batches = (total num intervals / batch size); for 'korean_sample2.wav', it's 2 (how many of the speech intervals you'll pass through the model at once)
 
-        for batch_idx in range(num_batches):                            # for each batch:
+        for batch_idx in range(num_batches):                            # for each batch (==each speech interval in 'speech_intervals'):
             sample = list()                                                 # list of feature tensors (tensor ver of signal for an interval) for each interval
             speech_sections = list()                                        # list of dicts (dict: speech_section (keys: start, end))
             durations = list()                                              # list of duration (in secs)
 
-            for idx in range(batch_size):                                   # for each item in batch:
+            for idx in range(batch_size):                                   # for each i in batch: (i.e. just once as default)
                 speech_section = dict()                                         # speech_section dict for item {"start": START_TIME, "end: END_TIME}
                 speech_intervals_idx = batch_idx * batch_size + idx             # index of this speech interval (#) in set 'speech_intervals'
 
