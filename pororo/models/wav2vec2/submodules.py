@@ -173,7 +173,7 @@ class W2lDecoder(object):
         return torch.LongTensor(list(idxs))
 
 
-class W2lViterbiDecoder(W2lDecoder):
+class W2lViterbiDecoder(W2lDecoder):                                    # Viterbi decoder instead of beam search decoder
 
     def __init__(self, tgt_dict):
         super().__init__(tgt_dict)

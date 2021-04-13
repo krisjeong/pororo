@@ -24,7 +24,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
     graphemes = {                                           # smallest functional unit of writing system
         "ko": [
-            "ᅡ", "ᄋ", "ᄀ", "ᅵ", "ᆫ", "ᅳ", "ᅥ", "ᅩ", "ᄂ", "ᄃ", "ᄌ", "ᆯ", "ᄅ",
+            "ᅡ", "ᄋ", "ᄀ", "ᅵ", "ᆫ", "ᅳ", "ᅥ", "ᅩ", "ᄂ", "ᄃ", "ᄌ", "ᆯ", "ᄅ",            # indices (startingg at 5=space, 6=ㅏ) seem to be given in this order?
             "ᄉ", "ᅦ", "ᄆ", "ᄒ", "ᅢ", "ᅮ", "ᆼ", "ᆨ", "ᅧ", "ᄇ", "ᆻ", "ᆷ", "ᅣ",
             "ᄎ", "ᄁ", "ᅯ", "ᄄ", "ᅪ", "ᆭ", "ᆸ", "ᄐ", "ᅬ", "ᄍ", "ᄑ", "ᆺ", "ᇂ",
             "ᅭ", "ᇀ", "ᄏ", "ᅫ", "ᄊ", "ᆹ", "ᅤ", "ᅨ", "ᆽ", "ᄈ", "ᅲ", "ᅱ", "ᇁ",
@@ -45,7 +45,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         self.SAMPLE_RATE = 16000
         self.MINIMUM_INPUT_LENGTH = 1024
 
-        self.target_dict = Dictionary.load(dict_path)
+        self.target_dict = Dictionary.load(dict_path)                   # target_dict:  /home/kris/.pororo/misc/ko.ltr.txt
 
         self.lang = lang
         self.graphemes = BrainWav2Vec2Recognizer.graphemes[lang]        # None if en or zh
@@ -166,7 +166,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                 if sample["net_input"]["source"].size(1) < self.MINIMUM_INPUT_LENGTH:       # ?
                     continue
                 # yapf: enable
-
+                                                                                            # hypos:
                 hypos = self.generator.generate(                                            # Generate a batch of inferences (for each batch (sentence?), generate tensor using wav2vec model
                     self.model,                                                             # list of list of dict {'tokens': tensor of ints, 'score: 0}
                     sample,                                                                 # [{'tokens': tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26, 22,  6, 18, 27,  8, 13,  5,  7, 23,  5, 49, 11, 14, 11, 10,  5,  8, 12,  5,  8,  6, 46,  7,  6, 29, 15,  6,  5,  8, 11, 14, 31,  7, 20,  5, 19,  6, 18,  6, 25,  7, 11, 17,  5,  7, 12, 59,  8,  9,  5,  7, 56, 22, 23,  5,  7, 23,  5, 49, 12, 29, 16,  9, 21,  6, 10,  5, 22, 12, 43, 19,11,  8, 13,  7, 27, 29, 15,  6,  5]), 'score': 0}]
@@ -223,7 +223,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                 sample,
                 prefix_tokens=None,
             )
-            hyp_pieces = self.target_dict.string(                                           # target_dict = target dict loaded from FB; hyp_pieces?
+            hyp_pieces = self.target_dict.string(                                           # 'hyp_pieces': string version of tensor of token indices, converted by using 'target_dict' (.pororo/misc/ko.ltr.txt)
                 hypo[0][0]["tokens"].int().cpu())                                           # hypo[0][0] (Cf. hypo[0])
 
             speech_start_time = str(datetime.timedelta(seconds=0))                          # start_time set to 0

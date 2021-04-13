@@ -104,15 +104,15 @@ class PororoAsrFactory(PororoFactoryBase):
             )
         from pororo.models.wav2vec2.recognizer import BrainWav2Vec2Recognizer       # Wav2Vec 2.0 Speech Recognizer
 
-        model_path = download_or_load(                      # Download or load model based on model information (to be passed into instances of vad_model and model)
+        model_path = download_or_load(                      # Download or load model based on model information (to be passed into instances of vad_model and model) (/home/kris/.pororo/misc/wav2vec.ko.pt)
             f"misc/{self.config.n_model}.pt",
             self.config.lang,
         )
-        dict_path = download_or_load(                       # Download or load dict based on dict path
+        dict_path = download_or_load(                       # Download or load dict based on dict path (/home/kris/.pororo/misc/ko.ltr.txt)
             f"misc/{self.config.lang}.ltr.txt",
             self.config.lang,
         )
-        vad_model_path = download_or_load(                  # download or load voice activity detection model
+        vad_model_path = download_or_load(                  # download or load voice activity detection model ( /home/kris/.pororo/misc/vad.pt)
             "misc/vad.pt",
             lang="multi",
         )
@@ -192,7 +192,7 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
     def predict(                                                                # Called when asr('filepath') made bc 'predict' is called when an object of PororoSimpleBase is called as a fn (__call__)
         self,
         audio_path: str,
-        **kwargs,
+        **kwargs,                                                               # kwargs (dict) is empty in our case! bc always called as asr(audio_path) and nothing else
     ) -> dict:
         """
         Conduct speech recognition for audio in a given path
@@ -208,11 +208,11 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             dict: result of speech recognition
 
         """
-        top_db = kwargs.get("top_db", 48)                                       # returns value of 'top_db' (threshold); 48 by default
-        batch_size = kwargs.get("batch_size", 1)
-        vad = kwargs.get("batch_size", False)
+        top_db = kwargs.get("top_db", 48)                                       # returns value of 'top_db' (threshold); returns 48 if doesn't exist in dict
+        batch_size = kwargs.get("batch_size", 1)                                # returns 1
+        vad = kwargs.get("batch_size", False)                                   # returns False in our case        # so if batch_size exists, vad = batch_size value that is input TODO: Why? --> figure out how this number is used
 
-        signal = self._preprocess_audio(audio_path)                             # preprocess audio; ndarray
+        signal = self._preprocess_audio(audio_path)                             # preprocess audio; 'signal' = ndarray form of audio
 
         return self._model.predict(                                             # BrainWav2Vec2Recognizer.predict(); returns result_dict (containing “audio”, “duration”, “results”)
             audio_path=audio_path,

@@ -174,7 +174,7 @@ logging.getLogger("librosa").setLevel(logging.WARN)
 
 
 class Pororo:               # loads a user-selected, task-specific module onto chosen device (default GPU); 'asr' = PororoASR(BrainWav2Vec2Recognizer)
-    r"""
+    """
     This is a generic class that will return one of the task-specific model classes of the library
     when created with the `__new__()` method
 
