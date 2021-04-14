@@ -64,7 +64,7 @@ class BrainWav2VecEncoder(FairseqEncoder):
         self.num_updates = 0
 
         if tgt_dict is not None:
-            self.proj = Linear(d, len(tgt_dict))
+            self.proj = Linear(d, len(tgt_dict))    # changes this to vocab size so that we can run argmax (create learnable variables (out_features, in_features) to fit length of tgt_dict)
         elif getattr(args, "decoder_embed_dim", d) != d:
             self.proj = Linear(d, args.decoder_embed_dim)
         else:
@@ -85,7 +85,7 @@ class BrainWav2VecEncoder(FairseqEncoder):
         ft = self.freeze_finetune_updates <= self.num_updates
 
         with torch.no_grad() if not ft else contextlib.ExitStack():
-            x, padding_mask = self.w2v_model.extract_features(**w2v_args)
+            x, padding_mask = self.w2v_model.extract_features(**w2v_args)       # w2v_model (Wav2Vec2Model (fairseq.models.wav2vec.wav2vec2) -> extract_features
 
             if tbc:
                 # B x T x C -> T x B x C
@@ -94,11 +94,11 @@ class BrainWav2VecEncoder(FairseqEncoder):
         x = self.final_dropout(x)
 
         if self.proj:
-            x = self.proj(x)
+            x = self.proj(x)                    # after projection, size [661, 1, 108]
 
         return {
             "encoder_out": x,  # T x B x C
-            "encoder_padding_mask": padding_mask,  # B x T
+            "encoder_padding_mask": padding_mask,  # B x  2T
             "padding_mask": padding_mask,
         }
 
@@ -156,7 +156,7 @@ class W2lDecoder(object):
 
     def get_emissions(self, models, encoder_input):
         """Run encoder and normalize emissions"""
-        encoder_out = models[0](**encoder_input)
+        encoder_out = models[0](**encoder_input)                # models[0]: BrainWav2VecCtc; when calling on model, forward fn automatically gets run
         if self.criterion_type == CriterionType.CTC:
             emissions = models[0].get_normalized_probs(
                 encoder_out,

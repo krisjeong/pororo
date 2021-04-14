@@ -207,19 +207,19 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         else:                                                                           # if duration <= 50s:
             net_input, sample, hypo_dict = dict(), dict(), dict()
 
-            feature, duration = self._parse_audio(signal)                                   # feature (tensor ver of signal) and duration (in sec)
+            feature, duration = self._parse_audio(signal)                                   # feature (tensor ver of signal; [211883]) and duration (in sec)
 
-            net_input["source"] = feature.unsqueeze(0).to(self.device)                      # add a dimension of 1 in index 0 to feature        # TODO: figure out math
+            net_input["source"] = feature.unsqueeze(0).to(self.device)                      # add a dimension of 1 in index 0 to feature (change to 2D)        # TODO: figure out math
 
-            padding_mask = torch.BoolTensor(                                                # ?
+            padding_mask = torch.BoolTensor(                                                # ? # will be passed onto Wav2Vec2Model as input (will have to check that code later)
                 net_input["source"].size(1)).fill_(False)
             net_input["padding_mask"] = padding_mask.unsqueeze(0).to(
                 self.device)
 
             sample["net_input"] = net_input                                                 # add dict 'net_input' to dict 'sample'
 
-            hypo = self.generator.generate(                                                 # Generate a batch of inferences using wav2vec model
-                self.model,
+            hypo = self.generator.generate(                                                 # Generate a batch of inferences using wav2vec model (W2lViterbiDecoder)
+                self.model,                                                                 # self.model = BrainWav2VecCtc.build_model
                 sample,
                 prefix_tokens=None,
             )

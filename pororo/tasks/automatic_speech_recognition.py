@@ -181,10 +181,10 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             )
 
             if sample_rate != self.SAMPLE_RATE:
-                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match sample rate
+                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match sample rate (16000)
 
-            channel_sounds = signal.split_to_mono()
-            signal = np.array(                                                  # 'signal' converted to np.array of samples
+            channel_sounds = signal.split_to_mono()                             # change stereo (which has 2 channels (i.e. signals)) to mono (extract single signal)
+            signal = np.array(                                                  # 'signal' converted to np.array of samples [211883]
                 [s.get_array_of_samples() for s in channel_sounds])[0]
 
         return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits
