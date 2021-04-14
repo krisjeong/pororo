@@ -200,12 +200,12 @@ class Pororo:               # loads a user-selected, task-specific module onto c
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")       # device: use GPU if available
 
         # Instantiate task-specific pipeline module, if possible
-        task_module = SUPPORTED_TASKS[task](                                        # 'task_module' = PororoAsrFactory.load(cuda) (=='task_module' = PororoASR(BrainWav2Vec2Recognizer, self.config))
+        task_module = SUPPORTED_TASKS[task](
             task,
             lang,
             model,
             **kwargs,
-        ).load(device)                                                              # load (in automatic_speech_recognition.py l89) user-selected, task-specific module on device
+        ).load(device)                                                              # load (in asr.py l89) user-selected, task-specific module on device
 
         return task_module
 
