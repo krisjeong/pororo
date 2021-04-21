@@ -45,25 +45,25 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         self.SAMPLE_RATE = 16000
         self.MINIMUM_INPUT_LENGTH = 1024
 
-        self.target_dict = Dictionary.load(dict_path)                   # target_dict:  /home/kris/.pororo/misc/ko.ltr.txt
+        self.target_dict = Dictionary.load(dict_path)                   # target_dict: dict loaded from /home/kris/.pororo/misc/ko.ltr.txt; length: 108 (104 vocabs + 4 more added (bos="<s>", pad="<pad>", eos="</s>", unk="<unk>"))
 
         self.lang = lang
         self.graphemes = BrainWav2Vec2Recognizer.graphemes[lang]        # None if en or zh
         self.device = device
 
         self.collate_fn = collate_fn                                    # merges a list of samples to form a mini-batch of Tensor(s) (returns tensor 'inputs' and int tensor 'input_lengths')
-        self.model = self._load_model(model_path, device, self.target_dict)     # Wav2Vec model
+        self.model = self._load_model(model_path, device, self.target_dict)     # Wav2VecCTC model; model = BrainWav2VecCtc.build_model (w/ pretrained weights from model_path: (/home/kris/.pororo/misc/wav2vec.ko.pt))
         self.generator = W2lViterbiDecoder(self.target_dict)
         self.vad_model = vad_model
 
-    def _load_model(self, model_path: str, device: str, target_dict) -> list:
-        w2v = torch.load(model_path, map_location=device)               # w2v = load model (pre-trained?) as object
+    def _load_model(self, model_path: str, device: str, target_dict) -> list:   # Loads BrainWav2VecCtc model w/ weights from pretranied model (/home/kris/.pororo/misc/wav2vec.ko.pt)
+        w2v = torch.load(model_path, map_location=device)               # w2v = load saved model (pre-trained?) as object
         model = BrainWav2VecCtc.build_model(                            # build wav2vec model
-            w2v["args"],                                                    # w/ info from pretrained model?
+            w2v["args"],
             target_dict,
             w2v["pretrain_args"],
         )
-        model.load_state_dict(w2v["model"], strict=True)                # copies parameters and buffers from w2v["model"]
+        model.load_state_dict(w2v["model"], strict=True)                # copies parameters and weights from pretrained w2v["model"]
         model.eval().to(self.device)                                    # sets model in evaluation mode
         return [model]                                                  # return model as a list?
 
@@ -204,16 +204,16 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
                 del hypos, net_input, sample                                                # 'hypos': batch of inferences, 'net_input': ?, 'sample': input?
 
-        else:                                                                           # if duration <= 50s:
+        else:                                                                           # if duration <= 50s (i.e. batch_interference = False):
             net_input, sample, hypo_dict = dict(), dict(), dict()
 
-            feature, duration = self._parse_audio(signal)                                   # feature (tensor ver of signal; [211883]) and duration (in sec)
+            feature, duration = self._parse_audio(signal)                                   # feature (tensor ver of signal; [211883]) and duration (in sec)    # duration: 13.2426875
 
             net_input["source"] = feature.unsqueeze(0).to(self.device)                      # add a dimension of 1 in index 0 to feature (change to 2D)        # TODO: figure out math
 
             padding_mask = torch.BoolTensor(                                                # ? # will be passed onto Wav2Vec2Model as input (will have to check that code later)
                 net_input["source"].size(1)).fill_(False)
-            net_input["padding_mask"] = padding_mask.unsqueeze(0).to(
+            net_input["padding_mask"] = padding_mask.unsqueeze(0).to(                       # net_input["source"].shape: torch.Size([1, 211883]), net_input["padding_mask"].shape: torch.Size([1, 211883]), filled with False
                 self.device)
 
             sample["net_input"] = net_input                                                 # add dict 'net_input' to dict 'sample'

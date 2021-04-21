@@ -174,20 +174,20 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
 
         else:
             sample_rate = librosa.get_samplerate(audio_path)            # sample_rate: number of samples (==frames) per second (or per other unit) taken from a continuous signal to make a discrete or digital signal.
-            signal = AudioSegment.from_file(                            # 'signal' = audio file (from_file opens and loads audio file)
+            signal = AudioSegment.from_file(                            # 'signal' = audio file (from_file opens and loads audio file); <pydub.audio_segment.AudioSegment object at 0x7f5e34cf70f0>
                 audio_path,
                 format=audio_extension,
-                frame_rate=sample_rate,
+                frame_rate=sample_rate,                                 # sample_rate: 44100 -> 'frame_rate': 44100
             )
 
             if sample_rate != self.SAMPLE_RATE:
-                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match sample rate (16000)
+                signal = signal.set_frame_rate(frame_rate=self.SAMPLE_RATE)     # fix frame rate to match SAMPLE_RATE (16000) -> 'signal.frame_rate' = 16000 (going from 44100 frames/samples per sec to 16000)
 
-            channel_sounds = signal.split_to_mono()                             # change stereo (which has 2 channels (i.e. signals)) to mono (extract single signal)
+            channel_sounds = signal.split_to_mono()                             # splits stereo (which has 2 speakers) into 2 individual channels (AudioSegment files w/ individual speakers)
             signal = np.array(                                                  # 'signal' converted to np.array of samples [211883]
-                [s.get_array_of_samples() for s in channel_sounds])[0]
+                [s.get_array_of_samples() for s in channel_sounds])[0]          # for s (each channel): get_array_of_samples (returns raw audio data as array of numeric samples)
 
-        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits
+        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits; signal.shape: (211883,)
 
     def predict(                                                                # Called when asr('filepath') made bc 'predict' is called when an object of PororoSimpleBase is called as a fn (__call__)
         self,

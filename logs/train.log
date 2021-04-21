@@ -1,0 +1,18 @@
+[2021-04-08 16:48:43,392 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-08 16:48:43,392 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-08 16:48:53,634 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |
+[2021-04-09 10:23:35,849 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-09 10:23:35,849 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-09 10:23:46,410 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |
+[2021-04-09 10:24:46,951 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-09 10:24:46,952 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-09 10:24:57,233 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |
+[2021-04-09 14:32:19,724 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-09 14:32:19,724 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-09 14:32:30,066 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |
+[2021-04-13 08:10:57,159 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-13 08:10:57,163 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-13 08:11:19,795 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |
+[2021-04-13 16:32:49,211 INFO] [asr.py: 15] args: Namespace(lang='kor', log_file='logs/train.log')
+[2021-04-13 16:32:49,212 INFO] [pororo.py: 202] lang: ko, device: cuda
+[2021-04-13 16:33:00,088 INFO] [recognizer.py: 106] naively inferenced sentence: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |

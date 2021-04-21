@@ -16,7 +16,7 @@ from wav2letter.criterion import CpuViterbiPath, get_data_ptr_as_bytes
 from wav2letter.decoder import CriterionType
 
 
-class BrainWav2VecEncoder(FairseqEncoder):
+class BrainWav2VecEncoder(FairseqEncoder):                                      # build wav2vec model w/ pretrained args?
     """ Modified from https://github.com/pytorch/fairseq """
 
     def __init__(self, args, tgt_dict=None, pretrain_args=None):
@@ -41,7 +41,7 @@ class BrainWav2VecEncoder(FairseqEncoder):
             "feature_grad_mult": args.feature_grad_mult,
         }
 
-        w2v_args = pretrain_args
+        w2v_args = pretrain_args                                               # w2v_args = pretrain_args
         assert (args.normalize == w2v_args.normalize
                ), "Fine-tuning works best when data normalization is the same"
 
@@ -49,15 +49,15 @@ class BrainWav2VecEncoder(FairseqEncoder):
             setattr(args, arg_name, arg_val)
 
         w2v_args.data = args.data
-        task = AudioPretrainingTask.setup_task(w2v_args)
-        model = task.build_model(w2v_args)
-
+        task = AudioPretrainingTask.setup_task(w2v_args)        # build_model using AudioPretrainingTask
+        model = task.build_model(w2v_args)                      # build model via task.build_model by using info from w2v_args.arch='wav2vec2'  # see model structure in notes)
+                                                                # check model structure (txt file) here
         model.remove_pretraining_modules()
-        super().__init__(task.source_dictionary)
+        super().__init__(task.source_dictionary)                # task.source_dictionary: None
 
-        d = w2v_args.encoder_embed_dim
+        d = w2v_args.encoder_embed_dim                          # d = 1024
 
-        self.w2v_model = model
+        self.w2v_model = model                                  # w2v_model = model
 
         self.final_dropout = nn.Dropout(args.final_dropout)
         self.freeze_finetune_updates = args.freeze_finetune_updates
@@ -77,24 +77,24 @@ class BrainWav2VecEncoder(FairseqEncoder):
 
     def forward(self, source, padding_mask, tbc=True, **kwargs):
         w2v_args = {
-            "source": source,
+            "source": source,                                                   # 'source' = signal tensor; 'padding_mask' = same-sized tensor as 'source' but filled w/ False
             "padding_mask": padding_mask,
             "mask": self.apply_mask and self.training,
         }
 
-        ft = self.freeze_finetune_updates <= self.num_updates
+        ft = self.freeze_finetune_updates <= self.num_updates                   # ft: False, self.freeze_finetune_updates: 10000, self.num_updates: 0
 
         with torch.no_grad() if not ft else contextlib.ExitStack():
             x, padding_mask = self.w2v_model.extract_features(**w2v_args)       # w2v_model (Wav2Vec2Model (fairseq.models.wav2vec.wav2vec2) -> extract_features
 
             if tbc:
                 # B x T x C -> T x B x C
-                x = x.transpose(0, 1)
+                x = x.transpose(0, 1)                                           # x.shape: torch.Size([661, 1, 1024]), padding_mask.shape: torch.Size([1, 661])
 
         x = self.final_dropout(x)
 
         if self.proj:
-            x = self.proj(x)                    # after projection, size [661, 1, 108]
+            x = self.proj(x)                                                    # after projection, x.shape: [661, 1, 108], padding_mask.shape: [1, 661]
 
         return {
             "encoder_out": x,  # T x B x C
@@ -126,7 +126,7 @@ class BrainWav2VecCtc(Wav2VecCtc):
     def build_model(cls, args, target_dict, pretrain_args):
         """Build a new model instance."""
         base_architecture(args)
-        w2v_encoder = BrainWav2VecEncoder(args, target_dict, pretrain_args)
+        w2v_encoder = BrainWav2VecEncoder(args, target_dict, pretrain_args)         # w2v_encoder =
         return cls(w2v_encoder, args)
 
 
@@ -146,7 +146,7 @@ class W2lDecoder(object):
         """Generate a batch of inferences."""
         # model.forward normally channels prev_output_tokens into the decoder
         # separately, but SequenceGenerator directly calls model.encoder
-        encoder_input = {
+        encoder_input = {      # encoder_input: {'source': tensor([[ 0.0001, -0.0002,  0.0001,  ..., -0.0038, -0.0035, -0.0045]], device='cuda:0') of shape [1, 211883] (signal), 'padding_mask': tensor([[False, False, False,  ..., False, False, False]], device='cuda:0') of shape [1, 211883]}
             k: v
             for k, v in sample["net_input"].items()
             if k != "prev_output_tokens"
@@ -156,7 +156,7 @@ class W2lDecoder(object):
 
     def get_emissions(self, models, encoder_input):
         """Run encoder and normalize emissions"""
-        encoder_out = models[0](**encoder_input)                # models[0]: BrainWav2VecCtc; when calling on model, forward fn automatically gets run
+        encoder_out = models[0](**encoder_input)                # models[0]: BrainWav2VecCtc; when calling on model, forward fn automatically gets run   # 'encoder_out': result of running BrainWav2VecCtc {'source': tensor([[ 0.0001, -0.0002,  0.0001,  ..., -0.0038, -0.0035, -0.0045]], device='cuda:0'), 'padding_mask': tensor([[False, False, False,  ..., False, False, False]], device='cuda:0')}
         if self.criterion_type == CriterionType.CTC:
             emissions = models[0].get_normalized_probs(
                 encoder_out,
