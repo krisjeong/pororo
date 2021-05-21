@@ -52,13 +52,13 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
         self.device = device
 
         self.collate_fn = collate_fn                                    # merges a list of samples to form a mini-batch of Tensor(s) (returns tensor 'inputs' and int tensor 'input_lengths')
-        self.model = self._load_model(model_path, device, self.target_dict)     # Wav2VecCTC model; model = BrainWav2VecCtc.build_model (w/ pretrained weights from model_path: (/home/kris/.pororo/misc/wav2vec.ko.pt))
+        self.model = self._load_model(model_path, device, self.target_dict)     # Wav2VecCTC model; model = BrainWav2VecCtc (made via BrainWav2VecCtc.build_model (w/ pretrained weights from model_path: (/home/kris/.pororo/misc/wav2vec.ko.pt)))
         self.generator = W2lViterbiDecoder(self.target_dict)
         self.vad_model = vad_model
 
-    def _load_model(self, model_path: str, device: str, target_dict) -> list:   # Loads BrainWav2VecCtc model w/ weights from pretranied model (/home/kris/.pororo/misc/wav2vec.ko.pt)
-        w2v = torch.load(model_path, map_location=device)               # w2v = load saved model (pre-trained?) as object
-        model = BrainWav2VecCtc.build_model(                            # build wav2vec model
+    def _load_model(self, model_path: str, device: str, target_dict) -> list:   # Loads BrainWav2VecCtc model w/ weights from pretrained model (/home/kris/.pororo/misc/wav2vec.ko.pt)
+        w2v = torch.load(model_path, map_location=device)               # w2v = load pretrained model saved by torch.save onto device (cuda)
+        model = BrainWav2VecCtc.build_model(                            # builds BrainWav2VecCtc model
             w2v["args"],
             target_dict,
             w2v["pretrain_args"],
@@ -145,38 +145,38 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                     sample_rate=self.SAMPLE_RATE,
                 )
             else:                                                                       # else:
-                speech_intervals = self._split_audio(signal, top_db)                        # rule-based: get list of non-silent intervals (==splices from 'signal', an ndarray ver of audio)from audio
+                speech_intervals = self._split_audio(signal, top_db)                        # rule-based: get list of non-silent intervals (==splices from 'signal', an ndarray ver of audio) from audio
             # either way, we get a list 'speech_intervals' of splices (of non-silent intervals) of the original 'signal' ndarray
             batches, total_speech_sections, total_durations = self._create_batches(      # return lists: 'batches' (of 'batch': tensors), 'total_speech_sections' (list of list 'speech_sections (for 1 batch)' of dicts 'speech_section' for 1 interval, shape {"start": START_TIME, "end": END_TIME}), 'total_durations' (of 'duration')
                 speech_intervals,
                 batch_size,
             )
 
-            for batch_idx, batch in enumerate(batches):                                 # for each batch:       # TODO: ==for each audio sample?
+            for batch_idx, batch in enumerate(batches):                                 # for each batch (dict of 'inputs' tensor (non-silent interval of 'signal'; all the batches add up to 211833) and 'input_lengths' int)
                 net_input, sample = dict(), dict()
 
-                net_input["padding_mask"] = get_mask_from_lengths(                          # What's going on?
-                    inputs=batch["inputs"],                                                 # net_input["padding_mask"] =
+                net_input["padding_mask"] = get_mask_from_lengths(                          # net_input["padding_mask"] = tensor same size as batch["inputs"] filled w/ False
+                    inputs=batch["inputs"],
                     seq_lengths=batch["input_lengths"],
                 ).to(self.device)
-                net_input["source"] = batch["inputs"].to(self.device)                       # ?
-                sample["net_input"] = net_input                                             # ?
+                net_input["source"] = batch["inputs"].to(self.device)                       # net_input["source"] = batch["inputs"] (==the tensor w/ frequencies of a section from overall signal)
+                sample["net_input"] = net_input                                             # sample = dict containing net_input (dict; "source": tensor w/ frequencies of a section, "padding_mask": tensor w/ same size as "source" filled w/ False)
 
                 # yapf: disable
-                if sample["net_input"]["source"].size(1) < self.MINIMUM_INPUT_LENGTH:       # ?
+                if sample["net_input"]["source"].size(1) < self.MINIMUM_INPUT_LENGTH:       # skip this iteration if section is too short
                     continue
                 # yapf: enable
-                                                                                            # hypos:
-                hypos = self.generator.generate(                                            # Generate a batch of inferences (for each batch (sentence?), generate tensor using wav2vec model
-                    self.model,                                                             # list of list of dict {'tokens': tensor of ints, 'score: 0}
-                    sample,                                                                 # [{'tokens': tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26, 22,  6, 18, 27,  8, 13,  5,  7, 23,  5, 49, 11, 14, 11, 10,  5,  8, 12,  5,  8,  6, 46,  7,  6, 29, 15,  6,  5,  8, 11, 14, 31,  7, 20,  5, 19,  6, 18,  6, 25,  7, 11, 17,  5,  7, 12, 59,  8,  9,  5,  7, 56, 22, 23,  5,  7, 23,  5, 49, 12, 29, 16,  9, 21,  6, 10,  5, 22, 12, 43, 19,11,  8, 13,  7, 27, 29, 15,  6,  5]), 'score': 0}]
+                                                                                            # hypos: list of list of dict [[{'tokens': tensor of ints, 'score: 0}; tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26, 22,  6, 18, 27,  8, 13,  5]), "score": 0}]]
+                hypos = self.generator.generate(      # W2lViterbiDecoder -> W2lDecoder.generate   # Generate a batch of inferences (for each batch (section), generate tensor using wav2vec model
+                    self.model,                                                             # model = BrainWav2VecCtc.build_model (built w/ pretrained weights from model_path: (/home/kris/.pororo/misc/wav2vec.ko.pt))
+                    sample,
 
                     prefix_tokens=None,
                 )
 
-                for hypo_idx, hypo in enumerate(hypos):                                     # For each inference (i.e. for 1 section):       # what is hypo--is it a word? a letter?
+                for hypo_idx, hypo in enumerate(hypos):                                     # TODO: does 'hypos' ever have more than 1 hypo?  # For each inference (i.e. for 1 section):       # hypo_idx: 0; hypo: [{'tokens': tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26, 22,  6, 18, 27,  8, 13,  5]), 'score': 0}]
                     hypo_dict = dict()
-                    hyp_pieces = self.target_dict.string(                                       # convert tensor of ints to string (letters) using dict --> hyp_pieces: all tokens (letter by letter),
+                    hyp_pieces = self.target_dict.string(                                       # convert tensor of ints to string (letters) using dict --> hyp_pieces: all tokens (letter by letter), "ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ |"
                         hypo[0]["tokens"].int().cpu())                                          # dict = target dict loaded from FB;
                     speech_section = total_speech_sections[batch_idx][hypo_idx]                 # get dict 'speech_section' (for this section); {"start": START_TIME, "end": END_TIME}
 
@@ -196,10 +196,10 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
                     # yapf: disable                                                         # hypo_dict: dict printed out when asr is run (inside dict 'results')
                     hypo_dict["speech_section"] = f"{speech_start_time} ~ {speech_end_time}"    # time stamps for segment
                     hypo_dict["length_ms"] = total_durations[batch_idx][hypo_idx] * 1000        # 'total_durations': list (of 'duration'); getting ith duration
-                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # puts individual letters together to make proper sentence
+                    hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                    # puts individual letters together to make proper sentence  # "그는 괜찮은 척하려고"
                     # yapf: enable
 
-                    if hypo_dict["speech"]:                                                     # if the text is not empty:
+                    if hypo_dict["speech"]:                                                     # if the text is not empty: (remove empty sections)
                         result_dict["results"].append(hypo_dict)                                    # append this dict to overall 'result_dict'
 
                 del hypos, net_input, sample                                                # 'hypos': batch of inferences, 'net_input': ?, 'sample': input?
@@ -220,11 +220,11 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
 
             hypo = self.generator.generate(                                                 # Generate a batch of inferences using wav2vec model (W2lViterbiDecoder)
                 self.model,                                                                 # self.model = BrainWav2VecCtc.build_model
-                sample,
+                sample,                                                                     # 'hypo': [[{'tokens': tensor([ 8, 11, 14, 11, 10,  5,  8, 48, 10, 32,  6, 37,  7, 11, 10,  5, 32, 12, 26,  5, 22,  6, 18, 27,  8, 13,  5,  7, 23,  5, 49, 11, 14, 11, 10,  5, 8, 12,  5,  8,  6, 46,  7,  6, 29, 15,  6,  5,  8, 11, 14, 27,  7, 20, 5, 19,  6, 18,  6, 25,  7, 11, 17,  5,  7, 12, 59,  8,  9,  5,  7, 56, 22, 23,  5,  7, 23,  5, 49, 12, 29, 16,  9, 21,  6, 10,  5, 22, 12, 43, 49, 11,  8, 13,  7, 27, 29, 15,  6,  5,  7, 45, 25, 15, 13, 10,  7, 11, 17,  5,  7,  6, 33, 27, 29, 49, 12, 18,  6,  5]), 'score': 0}]]
                 prefix_tokens=None,
             )
             hyp_pieces = self.target_dict.string(                                           # 'hyp_pieces': string version of tensor of token indices, converted by using 'target_dict' (.pororo/misc/ko.ltr.txt)
-                hypo[0][0]["tokens"].int().cpu())                                           # hypo[0][0] (Cf. hypo[0])
+                hypo[0][0]["tokens"].int().cpu())                                           # hypo[0][0] (Cf. hypo[0])      # hyp_pieces: ᄀ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅫ ᆫ ᄎ ᅡ ᆭ ᄋ ᅳ ᆫ | ᄎ ᅥ ᆨ | ᄒ ᅡ ᄅ ᅧ ᄀ ᅩ | ᄋ ᅢ | ᄊ ᅳ ᄂ ᅳ ᆫ | ᄀ ᅥ | ᄀ ᅡ ᇀ ᄋ ᅡ ᆻ ᄃ ᅡ | ᄀ ᅳ ᄂ ᅧ ᄋ ᅦ | ᄉ ᅡ ᄅ ᅡ ᆼ ᄋ ᅳ ᆯ | ᄋ ᅥ ᆮ ᄀ ᅵ | ᄋ ᅱ ᄒ ᅢ | ᄋ ᅢ | ᄊ ᅥ ᆻ ᄌ ᅵ ᄆ ᅡ ᆫ | ᄒ ᅥ ᆺ ᄊ ᅳ ᄀ ᅩ ᄋ ᅧ ᆻ ᄃ ᅡ | ᄋ ᅭ ᆼ ᄃ ᅩ ᆫ ᄋ ᅳ ᆯ | ᄋ ᅡ ᄁ ᅧ ᆻ ᄊ ᅥ ᄅ ᅡ |, len(hyp_pieces): 239
 
             speech_start_time = str(datetime.timedelta(seconds=0))                          # start_time set to 0
             speech_end_time = str(
@@ -233,7 +233,7 @@ class BrainWav2Vec2Recognizer(object):          """ Analyzes signal as array & b
             hypo_dict[
                 "speech_section"] = f"{speech_start_time} ~ {speech_end_time}"              # fill up 'hypo_dict' (dict inside 'results')
             hypo_dict["length_ms"] = duration * 1000                                        # total_durations[batch_idx][hypo_idx] * 1000
-            hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                        # TODO: further examine
+            hypo_dict["speech"] = self._text_postprocess(hyp_pieces)                        # 그는 괜찮은 척 하려고 애 쓰는 거 같았다 그녀에 사랑을 얻기 위해 애 썼지만 헛쓰고였다 용돈을 아꼈써라
 
             if hypo_dict["speech"]:
                 result_dict["results"].append(hypo_dict)

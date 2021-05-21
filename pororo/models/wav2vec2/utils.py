@@ -4,13 +4,13 @@ import torch
 from torch import BoolTensor, Tensor
 
 
-def get_mask_from_lengths(inputs: Tensor, seq_lengths: Tensor) -> Tensor:
-    mask = BoolTensor(inputs.size()).fill_(False)                   # mask = Boolean tensor of size input
+def get_mask_from_lengths(inputs: Tensor, seq_lengths: Tensor) -> Tensor:       # 'inputs' = tensor of frequencies; 'seq_lengths' = length of tensor (i.e. slice)
+    mask = BoolTensor(inputs.size()).fill_(False)                   # mask = Boolean tensor of size input, initially filled w/ False
 
-    for idx, length in enumerate(seq_lengths):                      #
+    for idx, length in enumerate(seq_lengths):                      # idx always = 0; length = number inside seq_lengths        # TODO: why write it like this?
         length = length.item()
-
-        if (mask[idx].size(0) - length) > 0:                        #
+                                                                    # 'inputs', 'mask': shape [1, 30720], 'mask'[idx]: shape [30720], mask[idx].size(0): 30720
+        if (mask[idx].size(0) - length) > 0:                        # if mask[idx].size(0) is greater than input size, match and fill w/ True
             mask[idx].narrow(
                 dim=0,
                 start=length,

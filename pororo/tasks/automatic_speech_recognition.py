@@ -187,7 +187,7 @@ class PororoASR(PororoSimpleBase):                          """preprocesses audi
             signal = np.array(                                                  # 'signal' converted to np.array of samples [211883]
                 [s.get_array_of_samples() for s in channel_sounds])[0]          # for s (each channel): get_array_of_samples (returns raw audio data as array of numeric samples)
 
-        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits; signal.shape: (211883,)
+        return signal / self.MAX_VALUE                                          # returns (signal as np.array) / MAX_VALUE that can be made by bits (to normalize from 0-1?); signal.shape: (211883,)
 
     def predict(                                                                # Called when asr('filepath') made bc 'predict' is called when an object of PororoSimpleBase is called as a fn (__call__)
         self,
